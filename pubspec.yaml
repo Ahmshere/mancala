@@ -16,6 +16,14 @@ dev_dependencies:
     sdk: flutter
   flutter_launcher_icons: ^0.13.1
 
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icons/main_ico.png"
+  
+  adaptive_icon_background: "#5D4037" # Цвет фона как у вашей доски
+  adaptive_icon_foreground: "assets/icons/main_ico.png"
+
 flutter:
   uses-material-design: true
   
@@ -25,4 +33,4 @@ flutter:
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/icon.png"
+  image_path: "assets/icons/main_ico.png"
