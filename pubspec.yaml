@@ -21,7 +21,7 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/icons/main_ico.png"
   
-  adaptive_icon_background: "#5D4037" # Цвет фона как у вашей доски
+  adaptive_icon_background: "#5D4037" # Цвет фона как у доски
   adaptive_icon_foreground: "assets/icons/main_ico.png"
 
 flutter:
@@ -29,6 +29,7 @@ flutter:
   
   assets:
     - assets/sounds/
+    - assets/images/background.png
 
 flutter_icons:
   android: true

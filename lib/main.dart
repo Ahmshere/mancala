@@ -1,10 +1,12 @@
 import 'dart:math';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'settings_manager.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // Фиксируем ориентации для комфортной игры
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.landscapeLeft,
@@ -41,7 +43,7 @@ class _MainMenuState extends State<MainMenu> {
         builder: (context, setDialogState) {
           var txt = GameSettings.labels[GameSettings.lang]!;
           return AlertDialog(
-            backgroundColor: const Color(0xFF3E2723),
+            backgroundColor: const Color(0xFF3E2723).withOpacity(0.9),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: Text(txt['settings']!, style: const TextStyle(color: Colors.amber)),
             content: Column(
@@ -78,14 +80,14 @@ class _MainMenuState extends State<MainMenu> {
   Widget _buildDifficultyChips() {
     return Container(
       padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(15)),
+      decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(15)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: Difficulty.values.map((d) => ChoiceChip(
           label: Text(d.name.toUpperCase(), style: const TextStyle(fontSize: 12)),
           selected: GameSettings.difficulty == d,
           onSelected: (s) => setState(() => GameSettings.difficulty = d),
-          selectedColor: Colors.amber.withOpacity(0.3),
+          selectedColor: Colors.amber.withOpacity(0.4),
           backgroundColor: Colors.transparent,
         )).toList(),
       ),
@@ -100,7 +102,11 @@ class _MainMenuState extends State<MainMenu> {
         width: double.infinity,
         height: double.infinity,
         decoration: const BoxDecoration(
-          gradient: RadialGradient(colors: [Color(0xFF5D4037), Color(0xFF1B100E)], radius: 1.5),
+          image: DecorationImage(
+            image: AssetImage('assets/images/background.png'),
+            fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(Colors.black54, BlendMode.darken),
+          ),
         ),
         child: Stack(
           children: [
@@ -113,14 +119,22 @@ class _MainMenuState extends State<MainMenu> {
                       direction: isLandscape ? Axis.horizontal : Axis.vertical,
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        Text(txt['title']!, style: TextStyle(fontSize: isLandscape ? 45 : 55, fontWeight: FontWeight.bold, color: const Color(0xFFFFD54F), letterSpacing: 4)),
+                        Text(txt['title']!, 
+                          style: TextStyle(
+                            fontSize: isLandscape ? 50 : 60, 
+                            fontWeight: FontWeight.bold, 
+                            color: const Color(0xFFFFD54F), 
+                            letterSpacing: 6,
+                            shadows: const [Shadow(color: Colors.black, blurRadius: 15)]
+                          )
+                        ),
                         Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             _menuBtn(txt['pvp']!, GameMode.pvp, isLandscape),
                             const SizedBox(height: 15),
                             _menuBtn(txt['ai']!, GameMode.ai, isLandscape),
-                            const SizedBox(height: 25),
+                            const SizedBox(height: 30),
                             _buildDifficultyChips(),
                           ],
                         ),
@@ -131,9 +145,12 @@ class _MainMenuState extends State<MainMenu> {
               ),
             ),
             Positioned(
-              top: 40,
-              right: 20,
-              child: IconButton(icon: const Icon(Icons.settings, color: Color(0xFFFFD54F), size: 35), onPressed: _openSettings),
+              top: 50,
+              right: 25,
+              child: IconButton(
+                icon: const Icon(Icons.settings, color: Color(0xFFFFD54F), size: 40),
+                onPressed: _openSettings,
+              ),
             ),
           ],
         ),
@@ -144,17 +161,17 @@ class _MainMenuState extends State<MainMenu> {
   Widget _menuBtn(String text, GameMode mode, bool isLandscape) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF8D6E63), 
-        minimumSize: Size(isLandscape ? 200 : 260, 55),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))
+        backgroundColor: const Color(0xFF8D6E63).withOpacity(0.9), 
+        minimumSize: Size(isLandscape ? 220 : 280, 60),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: Colors.white24))
       ),
       onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MancalaGame(mode: mode))),
-      child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
     );
   }
 }
 
-/* ===================== ИГРОВОЙ ПРОЦЕСС ===================== */
+/* ===================== ИГРОВОЙ ЭКРАН ===================== */
 
 class MancalaGame extends StatefulWidget {
   final GameMode mode;
@@ -172,80 +189,77 @@ class _MancalaGameState extends State<MancalaGame> {
   @override
   void initState() { super.initState(); board[6] = 0; board[13] = 0; }
 
-// рисую камни
-Widget _buildStones(int count, bool isKalah) {
-  if (GameSettings.visualMode == VisualMode.numbersOnly || count == 0) {
-    return const SizedBox();
-  }
+  // КРУГОВОЕ РАСПРЕДЕЛЕНИЕ КАМНЕЙ
+  Widget _buildStones(int count, bool isKalah) {
+    if (GameSettings.visualMode == VisualMode.numbersOnly || count == 0) return const SizedBox();
 
-  // Палитра "стеклянных" камней
-  const stoneColors = [
-    [Colors.blueGrey, Colors.blueGrey],     // Классический
-    [Colors.teal, Colors.tealAccent],       // Зеленоватый
-    [Colors.indigo, Colors.lightBlue],      // Голубоватый
-    [Colors.brown, Colors.orangeAccent],    // Янтарный
-    [Colors.redAccent, Colors.red],         // Красноватый
-  ];
+    const stoneColors = [
+      [Colors.teal, Colors.tealAccent],
+      [Colors.indigo, Colors.lightBlue],
+      [Colors.brown, Colors.orangeAccent],
+      [Colors.redAccent, Colors.red],
+      [Colors.blueGrey, Colors.white70],
+    ];
 
-  int visibleStones = min(count, 12);
-  double radius = isKalah ? 30.0 : 25.0;
+    int visibleStones = min(count, 12);
+    double radius = isKalah ? 35.0 : 28.0;
 
-  return Stack(
-    alignment: Alignment.center,
-    children: List.generate(visibleStones, (index) {
-      double angle = (2 * pi / visibleStones) * index;
-      
-      // Выбираем цвет на основе индекса, чтобы он был постоянным для этого камня
-      var baseColor = stoneColors[index % stoneColors.length][0];
-      var accentColor = stoneColors[index % stoneColors.length][1];
+    return Stack(
+      alignment: Alignment.center,
+      children: List.generate(visibleStones, (index) {
+        double angle = (2 * pi / visibleStones) * index;
+        var colors = stoneColors[index % stoneColors.length];
 
-      return Transform.translate(
-        offset: Offset(cos(angle) * radius, sin(angle) * radius),
-        child: Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: RadialGradient(
-              colors: [
-                Colors.white.withOpacity(0.9), // Яркий блик
-                accentColor.withOpacity(0.7),   // Светлый оттенок
-                baseColor.withOpacity(0.9),     // Глубокий цвет
-              ],
-              center: const Alignment(-0.4, -0.4),
+        return Transform.translate(
+          offset: Offset(cos(angle) * radius, sin(angle) * radius),
+          child: Container(
+            width: 10, height: 10,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [Colors.white, colors[1], colors[0]],
+                center: const Alignment(-0.4, -0.4),
+              ),
+              boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 2, offset: Offset(1, 1))],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.4),
-                blurRadius: 2,
-                offset: const Offset(1, 1),
-              )
-            ],
           ),
-        ),
-      );
-    }),
-  );
-}
+        );
+      }),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     var txt = GameSettings.labels[GameSettings.lang]!;
     return Scaffold(
-      backgroundColor: const Color(0xFF2D1B18),
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 10),
-            Text(isP1Turn ? txt['p1_turn']! : (widget.mode == GameMode.ai ? txt['ai_turn']! : txt['p2_turn']!),
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.amber)),
-            Expanded(child: Center(child: FittedBox(child: _buildBoard()))),
-            TextButton.icon(
-              onPressed: () => Navigator.pop(context), 
-              icon: const Icon(Icons.arrow_back), 
-              label: Text(txt['menu']!)
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/background.png'),
+            fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(Colors.black87, BlendMode.darken),
+          ),
+        ),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+          child: SafeArea(
+            child: Column(
+              children: [
+                const SizedBox(height: 20),
+                Text(isP1Turn ? txt['p1_turn']! : (widget.mode == GameMode.ai ? txt['ai_turn']! : txt['p2_turn']!),
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFFFD54F))),
+                Expanded(child: Center(child: FittedBox(child: _buildBoard()))),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: TextButton.icon(
+                    onPressed: () => Navigator.pop(context), 
+                    icon: const Icon(Icons.exit_to_app, color: Colors.white70), 
+                    label: Text(txt['menu']!, style: const TextStyle(color: Colors.white70))
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -253,15 +267,20 @@ Widget _buildStones(int count, bool isKalah) {
 
   Widget _buildBoard() {
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: const Color(0xFF5D4037), borderRadius: BorderRadius.circular(40), border: Border.all(width: 8, color: const Color(0xFF3E2723))),
+      padding: const EdgeInsets.all(25),
+      decoration: BoxDecoration(
+        color: const Color(0xFF5D4037).withOpacity(0.8), 
+        borderRadius: BorderRadius.circular(50), 
+        border: Border.all(width: 10, color: const Color(0xFF3E2723)),
+        boxShadow: const [BoxShadow(color: Colors.black87, blurRadius: 20)]
+      ),
       child: Row(
         children: [
           _buildKalah(13, Colors.orangeAccent),
           Column(
             children: [
               Row(children: List.generate(6, (i) => _buildPit(12 - i))),
-              const SizedBox(height: 30),
+              const SizedBox(height: 40),
               Row(children: List.generate(6, (i) => _buildPit(i))),
             ],
           ),
@@ -276,24 +295,20 @@ Widget _buildStones(int count, bool isKalah) {
     return GestureDetector(
       onTap: () => active && !animating ? _move(i) : null,
       child: Container(
-        width: 85, height: 85, margin: const EdgeInsets.all(8),
+        width: 90, height: 90, margin: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: lastDrop == i ? Colors.white12 : Colors.black26, 
+          color: lastDrop == i ? Colors.white10 : Colors.black38, 
           shape: BoxShape.circle, 
-          border: Border.all(color: active ? Colors.white70 : Colors.black45, width: 2)
+          border: Border.all(color: active ? Colors.amber : Colors.black45, width: 3),
+          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)]
         ),
         child: Stack(
           alignment: Alignment.center,
           children: [
             _buildStones(board[i], false),
             Text("${board[i]}", 
-              style: const TextStyle(
-                fontSize: 28, 
-                fontWeight: FontWeight.bold, 
-                color: Color(0xFFFFD54F),
-                shadows: [Shadow(color: Colors.black, blurRadius: 6, offset: Offset(2, 2))]
-              )
-            ),
+              style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Color(0xFFFFD54F),
+              shadows: [Shadow(color: Colors.black, blurRadius: 8, offset: Offset(2, 2))])),
           ],
         ),
       ),
@@ -302,19 +317,20 @@ Widget _buildStones(int count, bool isKalah) {
 
   Widget _buildKalah(int i, Color color) {
     return Container(
-      width: 95, height: 210, margin: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(45), border: Border.all(color: color.withOpacity(0.5))),
+      width: 100, height: 240, margin: const EdgeInsets.symmetric(horizontal: 15),
+      decoration: BoxDecoration(
+        color: Colors.black45, 
+        borderRadius: BorderRadius.circular(50), 
+        border: Border.all(color: color.withOpacity(0.6), width: 3)
+      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           _buildStones(board[i], true),
-          const SizedBox(height: 10),
+          const SizedBox(height: 15),
           Text("${board[i]}", 
-            style: TextStyle(
-              fontSize: 40, color: color, fontWeight: FontWeight.bold,
-              shadows: const [Shadow(color: Colors.black, blurRadius: 10)]
-            )
-          ),
+            style: TextStyle(fontSize: 45, color: color, fontWeight: FontWeight.bold,
+            shadows: const [Shadow(color: Colors.black, blurRadius: 10)])),
         ],
       ),
     );
@@ -329,9 +345,9 @@ Widget _buildStones(int count, bool isKalah) {
       curr = (curr + 1) % 14;
       if (start < 6 && curr == 13) curr = 0;
       if (start > 6 && curr == 6) curr = 7;
-      HapticFeedback.selectionClick();
+      HapticFeedback.lightImpact(); // Виброотклик S24+
       setState(() { board[curr]++; lastDrop = curr; stones--; });
-      await Future.delayed(const Duration(milliseconds: 250));
+      await Future.delayed(const Duration(milliseconds: 180));
     }
     if (!((start < 6 && curr == 6) || (start > 6 && curr == 13))) {
       isP1Turn = !isP1Turn;
