@@ -172,17 +172,47 @@ class _MancalaGameState extends State<MancalaGame> {
   @override
   void initState() { super.initState(); board[6] = 0; board[13] = 0; }
 
-  Widget _buildStones(int count, bool isKalah) {
-    if (GameSettings.visualMode == VisualMode.numbersOnly || count == 0) return const SizedBox();
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: 2, runSpacing: 2,
-      children: List.generate(min(count, 12), (index) => Container(
-        width: isKalah ? 7 : 9, height: isKalah ? 7 : 9,
-        decoration: const BoxDecoration(color: Colors.white60, shape: BoxShape.circle),
-      )),
-    );
+// рисую камни
+Widget _buildStones(int count, bool isKalah) {
+  if (GameSettings.visualMode == VisualMode.numbersOnly || count == 0) {
+    return const SizedBox();
   }
+
+  // Ограничиваем количество видимых камней, чтобы не перегружать экран
+  int visibleStones = min(count, 12);
+  double radius = isKalah ? 30.0 : 25.0; // Радиус кольца, по которому расставим камни
+
+  return Stack(
+    alignment: Alignment.center,
+    children: List.generate(visibleStones, (index) {
+      // Вычисляем угол для каждого камня (в радианах)
+      double angle = (2 * pi / visibleStones) * index;
+      
+      return Transform.translate(
+        offset: Offset(cos(angle) * radius, sin(angle) * radius),
+        child: Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            // Создаем эффект объема (стеклянного камня)
+            gradient: RadialGradient(
+              colors: [
+                Colors.white,       // Блик
+                Colors.blueGrey[200]!, // Основной цвет
+                Colors.blueGrey[700]!, // Тень
+              ],
+              center: const Alignment(-0.3, -0.3), // Смещаем блик в сторону
+            ),
+            boxShadow: const [
+              BoxShadow(color: Colors.black45, blurRadius: 2, offset: Offset(1, 1))
+            ],
+          ),
+        ),
+      );
+    }),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
