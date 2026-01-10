@@ -178,16 +178,27 @@ Widget _buildStones(int count, bool isKalah) {
     return const SizedBox();
   }
 
-  // Ограничиваем количество видимых камней, чтобы не перегружать экран
+  // Палитра "стеклянных" камней
+  const stoneColors = [
+    [Colors.blueGrey, Colors.blueGrey],     // Классический
+    [Colors.teal, Colors.tealAccent],       // Зеленоватый
+    [Colors.indigo, Colors.lightBlue],      // Голубоватый
+    [Colors.brown, Colors.orangeAccent],    // Янтарный
+    [Colors.redAccent, Colors.red],         // Красноватый
+  ];
+
   int visibleStones = min(count, 12);
-  double radius = isKalah ? 30.0 : 25.0; // Радиус кольца, по которому расставим камни
+  double radius = isKalah ? 30.0 : 25.0;
 
   return Stack(
     alignment: Alignment.center,
     children: List.generate(visibleStones, (index) {
-      // Вычисляем угол для каждого камня (в радианах)
       double angle = (2 * pi / visibleStones) * index;
       
+      // Выбираем цвет на основе индекса, чтобы он был постоянным для этого камня
+      var baseColor = stoneColors[index % stoneColors.length][0];
+      var accentColor = stoneColors[index % stoneColors.length][1];
+
       return Transform.translate(
         offset: Offset(cos(angle) * radius, sin(angle) * radius),
         child: Container(
@@ -195,17 +206,20 @@ Widget _buildStones(int count, bool isKalah) {
           height: 10,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            // Создаем эффект объема (стеклянного камня)
             gradient: RadialGradient(
               colors: [
-                Colors.white,       // Блик
-                Colors.blueGrey[200]!, // Основной цвет
-                Colors.blueGrey[700]!, // Тень
+                Colors.white.withOpacity(0.9), // Яркий блик
+                accentColor.withOpacity(0.7),   // Светлый оттенок
+                baseColor.withOpacity(0.9),     // Глубокий цвет
               ],
-              center: const Alignment(-0.3, -0.3), // Смещаем блик в сторону
+              center: const Alignment(-0.4, -0.4),
             ),
-            boxShadow: const [
-              BoxShadow(color: Colors.black45, blurRadius: 2, offset: Offset(1, 1))
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.4),
+                blurRadius: 2,
+                offset: const Offset(1, 1),
+              )
             ],
           ),
         ),
@@ -317,7 +331,7 @@ Widget _buildStones(int count, bool isKalah) {
       if (start > 6 && curr == 6) curr = 7;
       HapticFeedback.selectionClick();
       setState(() { board[curr]++; lastDrop = curr; stones--; });
-      await Future.delayed(const Duration(milliseconds: 180));
+      await Future.delayed(const Duration(milliseconds: 250));
     }
     if (!((start < 6 && curr == 6) || (start > 6 && curr == 13))) {
       isP1Turn = !isP1Turn;

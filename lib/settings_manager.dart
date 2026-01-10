@@ -6,21 +6,21 @@ enum Difficulty { easy, medium, hard }
 enum GameMode { pvp, ai }
 
 class GameSettings {
-  static Language lang = Language.ru;
+  static Language lang = Language.en;
   static Difficulty difficulty = Difficulty.medium;
   static VisualMode visualMode = VisualMode.stonesAndNumbers;
 
   static const Map<Language, Map<String, String>> labels = {
     Language.ru: {
       'title': 'МАНКАЛА', 'pvp': '2 ИГРОКА', 'ai': 'ПРОТИВ БОТА',
-      'diff': 'СЛОЖНОСТЬ', 'p1_turn': 'ХОД: 1', 'p2_turn': 'ХОД: 2',
+      'diff': 'СЛОЖНОСТЬ', 'p1_turn': 'ИГРОК: 1', 'p2_turn': 'ИГРОК: 2',
       'ai_turn': 'БОТ ДУМАЕТ', 'over': 'КОНЕЦ', 'score': 'СЧЕТ',
       'menu': 'В МЕНЮ', 'settings': 'НАСТРОЙКИ',
       'vis_mode': 'ВИД КАМНЕЙ', 'vis_1': 'Цифры', 'vis_2': 'Цифры + Камни'
     },
     Language.en: {
       'title': 'MANCALA', 'pvp': '2 PLAYERS', 'ai': 'VS AI',
-      'diff': 'DIFFICULTY', 'p1_turn': 'P1 TURN', 'p2_turn': 'P2 TURN',
+      'diff': 'DIFFICULTY', 'p1_turn': 'PLAYER TURN', 'p2_turn': 'PLAYER TURN',
       'ai_turn': 'AI THINKING', 'over': 'GAME OVER', 'score': 'SCORE',
       'menu': 'MENU', 'settings': 'SETTINGS',
       'vis_mode': 'VISUALS', 'vis_1': 'Numbers', 'vis_2': 'Stones + Numbers'
