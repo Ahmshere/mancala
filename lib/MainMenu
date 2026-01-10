@@ -1,0 +1,55 @@
+class MainMenu extends StatelessWidget {
+  const MainMenu({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.green[900],
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'MANCALA',
+              style: TextStyle(
+                fontSize: 48,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 40),
+            menuButton(
+              context,
+              '👥 Два игрока',
+              GameMode.twoPlayers,
+            ),
+            const SizedBox(height: 20),
+            menuButton(
+              context,
+              '🤖 Против AI',
+              GameMode.vsAI,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget menuButton(BuildContext context, String text, GameMode mode) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+        backgroundColor: Colors.brown,
+      ),
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MancalaGame(mode: mode),
+          ),
+        );
+      },
+      child: Text(text, style: const TextStyle(fontSize: 20)),
+    );
+  }
+}
