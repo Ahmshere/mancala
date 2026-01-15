@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'settings_manager.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -119,15 +120,35 @@ class _MainMenuState extends State<MainMenu> {
                       direction: isLandscape ? Axis.horizontal : Axis.vertical,
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        Text(txt['title']!, 
-                          style: TextStyle(
-                            fontSize: isLandscape ? 50 : 60, 
-                            fontWeight: FontWeight.bold, 
-                            color: const Color(0xFFFFD54F), 
-                            letterSpacing: 6,
-                            shadows: const [Shadow(color: Colors.black, blurRadius: 15)]
-                          )
-                        ),
+           // Оборачиваем в FittedBox, чтобы текст не разрывался
+FittedBox(
+  fit: BoxFit.scaleDown, // Сжимать только если не влезает
+  child: Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 20), // Небольшой отступ от краев
+    child: Text(
+      txt['title']!,
+      style: GoogleFonts.cinzel(
+        textStyle: TextStyle(
+          fontSize: isLandscape ? 50 : 65,
+          fontWeight: FontWeight.normal,
+          color: const Color(0xFFFFD54F),
+          letterSpacing: 8,
+          shadows: [
+            Shadow(
+              color: Colors.black.withOpacity(0.8),
+              blurRadius: 20,
+              offset: const Offset(0, 5),
+            ),
+            const Shadow(
+              color: Colors.orangeAccent,
+              blurRadius: 2,
+            ),
+          ],
+        ),
+      ),
+    ),
+  ),
+),
                         Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -152,6 +173,21 @@ class _MainMenuState extends State<MainMenu> {
                 onPressed: _openSettings,
               ),
             ),
+            Positioned(
+      bottom: 20, // Отступ от нижнего края
+      left: 0,
+      right: 0,
+      child: Center(
+        child: Text(
+          "version: ${GameSettings.appVersion}", 
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.5), // Полупрозрачный белый
+            fontSize: 12,
+            letterSpacing: 1.2,
+          ),
+        ),
+      ),
+    ),
           ],
         ),
       ),
