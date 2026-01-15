@@ -2,12 +2,16 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 /// Анимированный камень для игры Mancala
+/* ==========================================================================
+   1. АНИМАЦИЯ КАМНЯ В ЛУНКЕ (AnimatedStone)
+   Отвечает за плавное появление и "подпрыгивание" камней при их добавлении.
+   ========================================================================== */
 class AnimatedStone extends StatefulWidget {
-  final double angle;
-  final double radius;
-  final List<Color> colors;
-  final int index;
-  final int delay;
+final double angle;  // Угол размещения (для кругового или хаотичного расположения)
+  final double radius; // Радиус разброса от центра лунки
+  final List<Color> colors; // Список цветов для градиента (светлый и темный)
+  final int index;     // Порядковый номер камня (используется для задержки)
+  final int delay;     // Задержка перед началом анимации появления (в мс)
 
   const AnimatedStone({
     super.key,
@@ -28,14 +32,15 @@ class _AnimatedStoneState extends State<AnimatedStone>
   late Animation<double> _scaleAnimation;
   late Animation<double> _opacityAnimation;
 
+// Настройка контроллера: 500 мс на появление одного камня
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 500),
       vsync: this,
     );
-
+// Эффект "упругого" появления (Scale): камень увеличивается с 0 до 1 с отскоком
     _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
@@ -51,6 +56,7 @@ class _AnimatedStoneState extends State<AnimatedStone>
     );
 
     // Задержка для каскадной анимации
+    // Запуск анимации с индивидуальной задержкой, чтобы камни падали по очереди
     Future.delayed(Duration(milliseconds: widget.delay), () {
       if (mounted) _controller.forward();
     });
@@ -258,6 +264,10 @@ class _PulseAnimationState extends State<PulseAnimation>
 
 
 // Конфетюги
+/* ==========================================================================
+   2. ЭФФЕКТ КОНФЕТТИ (StoneConfetti)
+   Создает дождь из вращающихся разноцветных камней при победе.
+   ========================================================================== */
   
 }
 class StoneConfetti extends StatefulWidget {
@@ -268,12 +278,14 @@ class StoneConfetti extends StatefulWidget {
 
 class _StoneConfettiState extends State<StoneConfetti> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  // Генерируем список из 60 уникальных частиц
   final List<_Particle> particles = List.generate(60, (i) => _Particle());
 
   @override
   void initState() {
     super.initState();
     // Делаем анимацию бесконечной (repeat), чтобы камни могли падать волнами
+    // Цикл анимации: 4 секунды от верха до низа, повторяется бесконечно
     _controller = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
   }
 
@@ -318,11 +330,12 @@ class _StoneConfettiState extends State<StoneConfetti> with SingleTickerProvider
   }
 }
 
+/* Вспомогательный класс для описания свойств каждой частицы конфетти */
 class _Particle {
-  double x = Random().nextDouble();
+  double x = Random().nextDouble(); // Случайная позиция по горизонтали (0..1)
   double y = -0.2 - Random().nextDouble(); // Начинают выше экрана
-  double rotationSpeed = (Random().nextDouble() - 0.5) * 15; // Скорость вращения
-  double fallSpeed = 1.5 + Random().nextDouble() * 2.0; // Разная скорость падения
+  double rotationSpeed = (Random().nextDouble() - 0.5) * 15; // Скорость вращения. rotationSpeed: определяет количество оборотов вокруг оси за цикл анимации
+  double fallSpeed = 1.5 + Random().nextDouble() * 2.0; // Разная скорость падения.  fallSpeed: 1.5 - медленно, 3.5 - быстро. Определяет, как глубоко упадет за цикл.
   Color color = [
     Colors.tealAccent, 
     Colors.orangeAccent, 
@@ -331,3 +344,12 @@ class _Particle {
     Colors.amberAccent
   ][Random().nextInt(5)];
 }
+/*
+Хочешь больше камней в конфетти? Измени List.generate(60, ...) на 100.
+
+Хочешь, чтобы конфетти падало медленнее? Увеличь duration в StoneConfetti с 4 до 6 секунд.
+
+Хочешь, чтобы камни в лунках появлялись быстрее? В AnimatedStone уменьши duration с 500 до 200 мс.
+
+Хочешь изменить "хаотичность" падения? В классе ConfettiParticle поиграй со значением fallSpeed. Чем больше разброс между числами, тем более неравномерным будет дождь.
+*/

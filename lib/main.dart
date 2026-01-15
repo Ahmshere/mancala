@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'settings_manager.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'animations.dart'; // Новый файл для анимаций
-
+// my_email: prudnikov.michael@aol.com
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([
