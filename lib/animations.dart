@@ -1,0 +1,333 @@
+import 'dart:math';
+import 'package:flutter/material.dart';
+
+/// Анимированный камень для игры Mancala
+class AnimatedStone extends StatefulWidget {
+  final double angle;
+  final double radius;
+  final List<Color> colors;
+  final int index;
+  final int delay;
+
+  const AnimatedStone({
+    super.key,
+    required this.angle,
+    required this.radius,
+    required this.colors,
+    required this.index,
+    this.delay = 0,
+  });
+
+  @override
+  State<AnimatedStone> createState() => _AnimatedStoneState();
+}
+
+class _AnimatedStoneState extends State<AnimatedStone> 
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _opacityAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.elasticOut,
+      ),
+    );
+
+    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
+      ),
+    );
+
+    // Задержка для каскадной анимации
+    Future.delayed(Duration(milliseconds: widget.delay), () {
+      if (mounted) _controller.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(
+            cos(widget.angle) * widget.radius,
+            sin(widget.angle) * widget.radius,
+          ),
+          child: Opacity(
+            opacity: _opacityAnimation.value,
+            child: Transform.scale(
+              scale: _scaleAnimation.value,
+              child: Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      Colors.white,
+                      widget.colors[1],
+                      widget.colors[0],
+                    ],
+                    center: const Alignment(-0.4, -0.4),
+                  ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black54,
+                      blurRadius: 2,
+                      offset: Offset(1, 1),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Анимация перемещения камня между лунками
+class StoneTransferAnimation extends StatefulWidget {
+  final Offset start;
+  final Offset end;
+  final Color color;
+  final VoidCallback? onComplete;
+
+  const StoneTransferAnimation({
+    super.key,
+    required this.start,
+    required this.end,
+    required this.color,
+    this.onComplete,
+  });
+
+  @override
+  State<StoneTransferAnimation> createState() => _StoneTransferAnimationState();
+}
+
+class _StoneTransferAnimationState extends State<StoneTransferAnimation>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _positionAnimation;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+
+    _positionAnimation = Tween<Offset>(
+      begin: widget.start,
+      end: widget.end,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    ));
+
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 1.3),
+        weight: 50,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.3, end: 1.0),
+        weight: 50,
+      ),
+    ]).animate(_controller);
+
+    _controller.forward().then((_) {
+      if (widget.onComplete != null) widget.onComplete!();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Positioned(
+          left: _positionAnimation.value.dx,
+          top: _positionAnimation.value.dy,
+          child: Transform.scale(
+            scale: _scaleAnimation.value,
+            child: Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: widget.color,
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black38,
+                    blurRadius: 4,
+                    offset: Offset(2, 2),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Анимация пульсации для активных лунок
+class PulseAnimation extends StatefulWidget {
+  final Widget child;
+  final bool enabled;
+
+  const PulseAnimation({
+    super.key,
+    required this.child,
+    this.enabled = true,
+  });
+
+  @override
+  State<PulseAnimation> createState() => _PulseAnimationState();
+}
+
+class _PulseAnimationState extends State<PulseAnimation>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _animation = Tween<double>(begin: 1.0, end: 1.05).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.enabled) return widget.child;
+
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _animation.value,
+          child: child,
+        );
+      },
+      child: widget.child,
+    );
+  }
+
+
+// Конфетюги
+  
+}
+class StoneConfetti extends StatefulWidget {
+  const StoneConfetti({super.key});
+  @override
+  State<StoneConfetti> createState() => _StoneConfettiState();
+}
+
+class _StoneConfettiState extends State<StoneConfetti> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  final List<_Particle> particles = List.generate(60, (i) => _Particle());
+
+  @override
+  void initState() {
+    super.initState();
+    // Делаем анимацию бесконечной (repeat), чтобы камни могли падать волнами
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final size = MediaQuery.of(context).size;
+        return Stack(
+          children: particles.map((p) {
+            // Рассчитываем позицию: прогресс * скорость
+            double progress = _controller.value;
+            double currentY = (p.y + progress * p.fallSpeed) * size.height;
+            double currentRotation = progress * p.rotationSpeed;
+
+            return Positioned(
+              left: p.x * size.width,
+              top: currentY,
+              child: Transform.rotate(
+                angle: currentRotation,
+                child: Container(
+                  width: 12, height: 12, // Чуть увеличили, как и основные камни
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle, 
+                    color: p.color,
+                    boxShadow: [BoxShadow(color: Colors.black45, blurRadius: 3, offset: Offset(1,1))]
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+}
+
+class _Particle {
+  double x = Random().nextDouble();
+  double y = -0.2 - Random().nextDouble(); // Начинают выше экрана
+  double rotationSpeed = (Random().nextDouble() - 0.5) * 15; // Скорость вращения
+  double fallSpeed = 1.5 + Random().nextDouble() * 2.0; // Разная скорость падения
+  Color color = [
+    Colors.tealAccent, 
+    Colors.orangeAccent, 
+    Colors.redAccent, 
+    Colors.blueAccent, 
+    Colors.amberAccent
+  ][Random().nextInt(5)];
+}
