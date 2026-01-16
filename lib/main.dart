@@ -6,6 +6,7 @@ import 'settings_manager.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'animations.dart'; // Новый файл для анимаций
 import 'audio_manager.dart';
+import 'package:url_launcher/url_launcher.dart';
 // my_email: prudnikov.michael@aol.com
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -187,8 +188,11 @@ void _openSettings() {
                       setDialogState(() => GameSettings.sfxVolume = val);
                     },
                   ),
+                _buildSupportSection(txt),  
               ],
             ),
+
+
           ),
           actions: [
             Center(
@@ -204,6 +208,82 @@ void _openSettings() {
           ],
         );
       },
+    ),
+  );
+
+}
+Future<void> _launchCoffeeURL() async {
+  final Uri url = Uri.parse('https://buymeacoffee.com/thegradtouralone');
+  if (!await launchUrl(url)) {
+    throw Exception('Could not launch $url');
+  }
+}
+
+
+Widget _buildSupportSection(Map<String, String> txt) {
+  return Container(
+    margin: const EdgeInsets.only(top: 25),
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Colors.black38, Colors.brown.withOpacity(0.3)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderRadius: BorderRadius.circular(25),
+      border: Border.all(color: Colors.amber.withOpacity(0.4), width: 1.5),
+    ),
+    child: Column(
+      children: [
+        // Иконки, отражающие твою суть
+        const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.menu_book, color: Colors.amber, size: 20),
+            SizedBox(width: 15),
+            Icon(Icons.music_note, color: Colors.amber, size: 24),
+            SizedBox(width: 15),
+            Icon(Icons.directions_car, color: Colors.amber, size: 20),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          txt['support_title'] ?? '',
+          style: const TextStyle(
+            color: Colors.amber, 
+            fontWeight: FontWeight.bold, 
+            fontSize: 18,
+            letterSpacing: 1.2
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          txt['support_text'] ?? '',
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.white70, 
+            fontSize: 13, 
+            height: 1.4, // Межстрочный интервал для читаемости
+            fontStyle: FontStyle.italic
+          ),
+        ),
+        const SizedBox(height: 18),
+        ElevatedButton.icon(
+          onPressed: _launchCoffeeURL,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFFFDD00),
+            foregroundColor: Colors.black,
+            elevation: 5,
+            padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+          ),
+          icon: const Icon(Icons.coffee_rounded),
+          label: const Text(
+            'Support my journey', 
+            style: TextStyle(fontWeight: FontWeight.bold)
+          ),
+        ),
+      ],
     ),
   );
 }
@@ -907,10 +987,10 @@ void _openRules() {
     if (!mounted || animating) return;
 
     // Определяем глубину просчета в зависимости от сложности
-    // Легко: 2 хода, Средне: 4 хода, Сложно: 6-8 ходов
-    int depth = 2;
-    if (GameSettings.difficulty == Difficulty.medium) depth = 4;
-    if (GameSettings.difficulty == Difficulty.hard) depth = 8;
+    // Легко: 2 хода, Средне: 6, Сложно: 8-10 ходов
+    int depth = 4; // Базовая глубина
+    if (GameSettings.difficulty == Difficulty.medium) depth = 6;
+    if (GameSettings.difficulty == Difficulty.hard) depth = 10; // 10 - это уже уровень чемпиона
 
     int bestMove = -1;
     int bestValue = -999;
@@ -936,38 +1016,129 @@ void _openRules() {
     }
   }
 
-  // Алгоритм Minimax с Альфа-Бето отсечением
-  int _minimax(List<int> currentBoard, int depth, bool isMaximizing, int alpha, int beta) {
-    if (depth == 0 || _isTerminal(currentBoard)) {
-      // Оценка позиции: разница в Калахах
-      return currentBoard[13] - currentBoard[6];
-    }
+// сложность ии
+// Используем Record (новое в Dart), чтобы вернуть два значения сразу
+({List<int> board, bool extraTurn}) _simulateMoveDetailed(List<int> b, int start) {
+  List<int> newBoard = List.from(b);
+  int stones = newBoard[start];
+  newBoard[start] = 0;
+  int curr = start;
 
-    if (isMaximizing) {
-      int maxEval = -1000;
-      for (int i = 7; i < 13; i++) {
-        if (currentBoard[i] == 0) continue;
-        List<int> nextBoard = _simulateMove(currentBoard, i);
-        int eval = _minimax(nextBoard, depth - 1, false, alpha, beta);
-        maxEval = max(maxEval, eval);
-        alpha = max(alpha, eval);
-        if (beta <= alpha) break; // Отсечение
+  while (stones > 0) {
+    curr = (curr + 1) % 14;
+    // Пропуск чужой Калахи
+    if (start < 6 && curr == 13) curr = 0;
+    if (start > 6 && curr == 6) curr = 7;
+    
+    newBoard[curr]++;
+    stones--;
+  }
+
+  // ПРОВЕРКА НА ДОПОЛНИТЕЛЬНЫЙ ХОД
+  // Если последний камень попал в свою Калаху
+  bool extraTurn = (start < 6 && curr == 6) || (start > 6 && curr == 13);
+
+  // Логика захвата (только если это не была Калаха)
+  if (!extraTurn && newBoard[curr] == 1) {
+    bool ownSide = start < 6 ? curr < 6 : (curr > 6 && curr < 13);
+    if (ownSide) {
+      int opposite = 12 - curr;
+      if (newBoard[opposite] > 0) {
+        int kalah = start < 6 ? 6 : 13;
+        newBoard[kalah] += newBoard[opposite] + 1;
+        newBoard[opposite] = 0;
+        newBoard[curr] = 0;
       }
-      return maxEval;
-    } else {
-      int minEval = 1000;
-      for (int i = 0; i < 6; i++) {
-        if (currentBoard[i] == 0) continue;
-        List<int> nextBoard = _simulateMove(currentBoard, i);
-        int eval = _minimax(nextBoard, depth - 1, true, alpha, beta);
-        minEval = min(minEval, eval);
-        beta = min(beta, eval);
-        if (beta <= alpha) break; // Отсечение
-      }
-      return minEval;
     }
   }
 
+  return (board: newBoard, extraTurn: extraTurn);
+}
+
+int _evaluatePosition(List<int> b) {
+  // 1. Базовый счет (разница в Калахах) - вес 15
+  int score = (b[13] - b[6]) * 15;
+
+  // 2. Удержание камней на своей стороне - вес 2
+  // Это мешает игре закончиться слишком рано, если ИИ выигрывает по позиции
+  int aiSide = 0;
+  int playerSide = 0;
+  for (int i = 7; i < 13; i++) aiSide += b[i];
+  for (int i = 0; i < 6; i++) playerSide += b[i];
+  score += (aiSide - playerSide) * 2;
+
+  // 3. БОНУС ЗА БЛИЗОСТЬ К ПОБЕДЕ
+  // Если у ИИ уже больше половины всех камней ( > 24), он должен играть максимально агрессивно
+  if (b[13] > 24) score += 100;
+
+  // 4. ОХОТА ЗА ЗАХВАТОМ (Capture)
+  // Проверяем, может ли ИИ в один ход сделать захват
+  for (int i = 7; i < 13; i++) {
+    if (b[i] == 0) {
+      int opposite = 12 - i;
+      if (b[opposite] > 0) {
+        score += (b[opposite] * 5); // Очень высокий приоритет захвата
+      }
+    }
+  }
+
+  // 5. ЗАЩИТА (Anti-Capture)
+  // ИИ должен бояться оставлять свои полные лунки напротив твоих пустых
+  for (int i = 0; i < 6; i++) {
+    if (b[i] == 0) {
+      int opposite = 12 - i;
+      if (b[opposite] > 0) {
+        score -= (b[opposite] * 6); // Штраф еще выше, чем бонус за захват
+      }
+    }
+  }
+
+  return score;
+}
+  // Алгоритм Minimax с Альфа-Бето отсечением
+ int _minimax(List<int> currentBoard, int depth, bool isMaximizing, int alpha, int beta) {
+  if (depth == 0 || _isTerminal(currentBoard)) {
+    return _evaluatePosition(currentBoard); // Используем продвинутую оценку
+  }
+
+  if (isMaximizing) {
+    int maxEval = -1000;
+    for (int i = 7; i < 13; i++) {
+      if (currentBoard[i] == 0) continue;
+
+      // Симулируем ход
+      var result = _simulateMoveDetailed(currentBoard, i); 
+      List<int> nextBoard = result.board;
+      bool extraTurn = result.extraTurn;
+
+      // ЕСЛИ extraTurn = true, ИИ ходит СНОВА (isMaximizing остается true)
+      // Глубину уменьшаем, чтобы не зациклиться, но даем шанс найти комбинацию
+      int eval = _minimax(nextBoard, extraTurn ? depth : depth - 1, extraTurn, alpha, beta);
+      
+      maxEval = max(maxEval, eval);
+      alpha = max(alpha, eval);
+      if (beta <= alpha) break;
+    }
+    return maxEval;
+  } else {
+    int minEval = 1000;
+    for (int i = 0; i < 6; i++) {
+      if (currentBoard[i] == 0) continue;
+
+      var result = _simulateMoveDetailed(currentBoard, i);
+      List<int> nextBoard = result.board;
+      bool extraTurn = result.extraTurn;
+
+      // ЕСЛИ игроку выпал доп. ход, ИИ продолжает минимизировать (isMaximizing = false)
+      int eval = _minimax(nextBoard, extraTurn ? depth : depth - 1, !extraTurn, alpha, beta);
+      
+      minEval = min(minEval, eval);
+      beta = min(beta, eval);
+      if (beta <= alpha) break;
+    }
+    return minEval;
+  }
+}
   List<int> _simulateMove(List<int> b, int start) {
     List<int> newBoard = List.from(b);
     int stones = newBoard[start];

@@ -14,7 +14,7 @@ class GameSettings {
   static bool isSoundOn = true;
   static bool isMusicOn = true;
   static double musicVolume = 0.5;
-  static double sfxVolume = 0.8;
+  static double sfxVolume = 0.5;
   
   // Не забудь добавить переводы для новых пунктов меню в Label
 
@@ -40,6 +40,8 @@ class GameSettings {
       'p1': 'Player 1',
       'p2': 'Player 2',
       'play_again': 'Play Again',
+      'support_title': 'Support the Creator',
+      'support_text': 'Im a writer, musician, and traveler. This game features my original code and hand-recorded soundscapes. From Meanwhile, in My Life... stories to The Grand Tour Alone project — your support fuels my independent creative journey.',
       'rules_text': '''
 🎯 OBJECTIVE:
 
@@ -100,6 +102,8 @@ Try to make your last stone land in your Kalah to earn an extra turn!
       'p1': 'Игрок 1',
       'p2': 'Игрок 2',
       'play_again': 'Играть снова',
+      'support_title': 'Поддержать автора',
+      'support_text': 'Я писатель, музыкант и путешественник. В этой игре я соединил код и авторские звуки, записанные вручную. От историй «Meanwhile, in My Life...» до проекта «The Grand Tour Alone» — ваша поддержка помогает мне создавать это искусство независимо.',
       'rules_text': '''
 📋 ЦЕЛЬ:
 Собрать камней в свою Калаху (большую лунку)  больше, чем противник.
@@ -150,6 +154,8 @@ Try to make your last stone land in your Kalah to earn an extra turn!
       'p1': 'Spieler 1',
       'p2': 'Spieler 2',
       'play_again': 'Nochmal spielen',
+      'support_title': 'Unterstütze den Entwickler',
+      'support_text': 'ch bin Autor, Musiker und Reisender. Dieses Spiel kombiniert meinen Code mit handaufgenommenen Soundscapes. Von Meanwhile, in My Life...-Geschichten bis zum The Grand Tour Alone -Projekt — deine Unterstützung fördert meine unabhängige Arbeit.',
       'rules_text': '''
 🇩🇪 Deutsch
 🎯 ZIEL:
