@@ -37,7 +37,7 @@ class _AnimatedStoneState extends State<AnimatedStone>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 400),
       vsync: this,
     );
 // Эффект "упругого" появления (Scale): камень увеличивается с 0 до 1 с отскоком

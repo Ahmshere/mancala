@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'settings_manager.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'animations.dart'; // Новый файл для анимаций
+import 'audio_manager.dart';
 // my_email: prudnikov.michael@aol.com
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -72,7 +73,7 @@ class _MainMenuState extends State<MainMenu> with SingleTickerProviderStateMixin
   }
 
   void _openRules() {
-    var txt = GameSettings.labels[GameSettings.lang]!;
+    var txt = GameSettings.labels[GameSettings.lang] ?? GameSettings.labels[Language.en]!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -115,46 +116,153 @@ class _MainMenuState extends State<MainMenu> with SingleTickerProviderStateMixin
     
   }
 
-  void _openSettings() {
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          var txt = GameSettings.labels[GameSettings.lang]!;
-          return AlertDialog(
-            backgroundColor: const Color(0xFF3E2723).withOpacity(0.9),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: Text(txt['settings']!, style: const TextStyle(color: Colors.amber)),
-            content: Column(
+void _openSettings() {
+  final Map<String, String> txt = GameSettings.labels[GameSettings.lang] ?? 
+                                  GameSettings.labels[Language.en] ?? {};
+  
+  showDialog(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setDialogState) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF3E2723),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+          title: Text(
+            txt['settings'] ?? 'Settings',
+            style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          content: SingleChildScrollView( // Добавили скролл, если настроек станет много
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                DropdownButton<Language>(
-                  value: GameSettings.lang,
-                  isExpanded: true,
-                  dropdownColor: const Color(0xFF4E342E),
-                  items: Language.values.map((l) => DropdownMenuItem(value: l, child: Text(l.name.toUpperCase()))).toList(),
-                  onChanged: (v) { 
-                    setState(() => GameSettings.lang = v!); 
-                    setDialogState(() {}); 
+                // --- СЕКЦИЯ ЯЗЫКА ---
+                Text(txt['language'] ?? 'Language', style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _langButton(Language.ru, '🇷🇺', setDialogState),
+                    _langButton(Language.en, '🇺🇸', setDialogState),
+                    _langButton(Language.de, '🇩🇪', setDialogState),
+                  ],
+                ),
+                
+                const Divider(color: Colors.white24, height: 30),
+
+                // --- БЛОК МУЗЫКИ ---
+                _buildSettingRow(
+                  icon: GameSettings.isMusicOn ? Icons.music_note : Icons.music_off,
+                  label: txt['music'] ?? 'Music',
+                  value: GameSettings.isMusicOn,
+                  onChanged: (val) {
+                    setDialogState(() => GameSettings.isMusicOn = val);
+                    val ? AudioManager().playMusic() : AudioManager().stopMusic();
                   },
                 ),
-                const SizedBox(height: 20),
-                SwitchListTile(
-                  title: Text(GameSettings.visualMode == VisualMode.numbersOnly ? txt['vis_1']! : txt['vis_2']!),
-                  value: GameSettings.visualMode == VisualMode.stonesAndNumbers,
-                  activeColor: Colors.amber,
-                  onChanged: (v) {
-                    setState(() => GameSettings.visualMode = v ? VisualMode.stonesAndNumbers : VisualMode.numbersOnly);
-                    setDialogState(() {});
+                if (GameSettings.isMusicOn)
+                  _buildVolumeSlider(
+                    value: GameSettings.musicVolume,
+                    onChanged: (val) {
+                      setDialogState(() => GameSettings.musicVolume = val);
+                      AudioManager().updateMusicVolume();
+                    },
+                  ),
+
+                const SizedBox(height: 15),
+
+                // --- БЛОК ЗВУКОВ ---
+                _buildSettingRow(
+                  icon: GameSettings.isSoundOn ? Icons.volume_up : Icons.volume_off,
+                  label: txt['sound'] ?? 'Sounds',
+                  value: GameSettings.isSoundOn,
+                  onChanged: (val) {
+                    setDialogState(() => GameSettings.isSoundOn = val);
                   },
                 ),
+                if (GameSettings.isSoundOn)
+                  _buildVolumeSlider(
+                    value: GameSettings.sfxVolume,
+                    onChanged: (val) {
+                      setDialogState(() => GameSettings.sfxVolume = val);
+                    },
+                  ),
               ],
             ),
-          );
-        }
+          ),
+          actions: [
+            Center(
+              child: TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  setState(() {}); // Обновляем главный экран, чтобы язык сменился везде
+                },
+                child: Text(txt['close'] ?? 'Close', 
+                  style: const TextStyle(color: Colors.amber, fontSize: 18)),
+              ),
+            ),
+          ],
+        );
+      },
+    ),
+  );
+}
+
+// Вспомогательный виджет для кнопки выбора языка
+Widget _langButton(Language language, String flag, StateSetter setDialogState) {
+  // Сравниваем ИМЯ энэма со строкой кода
+  bool isSelected = GameSettings.lang == language;
+ return GestureDetector(
+    onTap: () {
+      setDialogState(() {
+        GameSettings.lang = language;
+      });
+    },
+    child: Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: isSelected ? Colors.amber.withOpacity(0.2) : Colors.transparent,
+        border: Border.all(color: isSelected ? Colors.amber : Colors.white24),
+        borderRadius: BorderRadius.circular(10),
       ),
-    );
-  }
+      child: Text(flag, style: const TextStyle(fontSize: 24)),
+    ),
+  );
+}
+
+// Вспомогательный виджет для строк настроек
+Widget _buildSettingRow({required IconData icon, required String label, required bool value, required Function(bool) onChanged}) {
+  return Row(
+    children: [
+      Icon(icon, color: Colors.white70),
+      const SizedBox(width: 15),
+      Expanded(child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 16))),
+      Switch(
+        value: value,
+        activeColor: Colors.amber,
+        onChanged: onChanged,
+      ),
+    ],
+  );
+}
+
+// Вспомогательный виджет для слайдера
+Widget _buildVolumeSlider({required double value, required Function(double) onChanged}) {
+  return SliderTheme(
+    data: SliderTheme.of(context).copyWith(
+      activeTrackColor: Colors.amber,
+      inactiveTrackColor: Colors.white12,
+      thumbColor: Colors.amberAccent,
+      overlayColor: Colors.amber.withOpacity(0.2),
+    ),
+    child: Slider(
+      value: value,
+      min: 0.0,
+      max: 1.0,
+      onChanged: onChanged,
+    ),
+  );
+}
 
   Widget _buildDifficultyChips() {
     return Container(
@@ -175,7 +283,8 @@ class _MainMenuState extends State<MainMenu> with SingleTickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    var txt = GameSettings.labels[GameSettings.lang]!;
+    final String langName = GameSettings.lang.name;
+    var txt = GameSettings.labels[GameSettings.lang] ?? GameSettings.labels[Language.en]!;
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -214,7 +323,7 @@ class _MainMenuState extends State<MainMenu> with SingleTickerProviderStateMixin
                                       children: [
                                         // Магическое свечение
                                         Text(
-                                          txt['title']!,
+                                          txt['title']?? 'MANCALA',
                                           style: GoogleFonts.cinzel(
                                             textStyle: TextStyle(
                                               fontSize: isLandscape ? 50 : 65,
@@ -230,7 +339,7 @@ class _MainMenuState extends State<MainMenu> with SingleTickerProviderStateMixin
                                         ),
                                         // Основной текст
                                         Text(
-                                          txt['title']!,
+                                          txt['title']?? 'MANCALA',
                                           style: GoogleFonts.cinzel(
                                             textStyle: TextStyle(
                                               fontSize: isLandscape ? 50 : 65,
@@ -262,9 +371,9 @@ class _MainMenuState extends State<MainMenu> with SingleTickerProviderStateMixin
                         Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            _menuBtn(txt['pvp']!, GameMode.pvp, isLandscape),
+                            _menuBtn(txt['pvp']?? 'PVP', GameMode.pvp, isLandscape),
                             const SizedBox(height: 15),
-                            _menuBtn(txt['ai']!, GameMode.ai, isLandscape),
+                            _menuBtn(txt['ai']?? 'VS CPU', GameMode.ai, isLandscape),
                             const SizedBox(height: 30),
                             _buildDifficultyChips(),
                           ],
@@ -343,7 +452,7 @@ class _MancalaGameState extends State<MancalaGame> with TickerProviderStateMixin
   int? lastDrop;
   late AnimationController _stoneAnimController;
 void _confirmExit() {
-    var txt = GameSettings.labels[GameSettings.lang]!;
+    var txt = GameSettings.labels[GameSettings.lang] ?? GameSettings.labels[Language.en]!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -391,7 +500,7 @@ void _confirmExit() {
     return p1Empty || p2Empty;
   }
 void _showGameOverDialog() {
-    var txt = GameSettings.labels[GameSettings.lang]!;
+    var txt = GameSettings.labels[GameSettings.lang] ?? GameSettings.labels[Language.en]!;
     
     // Берем только то, что уже лежит в Калахах
     int p1Score = board[6];
@@ -407,10 +516,13 @@ void _showGameOverDialog() {
     // Определяем победителя на основе текущих Калахов
     String winner;
     if (p1Score > p2Score) {
+      AudioManager().playSfx(AudioManager.winSound);
       winner = txt['p1_wins']!;
     } else if (p2Score > p1Score) {
+      AudioManager().playSfx(AudioManager.loseSound);
       winner = widget.mode == GameMode.ai ? txt['ai_wins']! : txt['p2_wins']!;
     } else {
+      AudioManager().playSfx(AudioManager.winSound);
       winner = txt['draw']!;
     }
     
@@ -542,7 +654,7 @@ void _showGameOverDialog() {
   }
 
 void _openRules() {
-    var txt = GameSettings.labels[GameSettings.lang]!;
+    var txt = GameSettings.labels[GameSettings.lang] ?? GameSettings.labels[Language.en]!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -582,7 +694,7 @@ void _openRules() {
   }
  @override
   Widget build(BuildContext context) {
-    var txt = GameSettings.labels[GameSettings.lang]!;
+    var txt = GameSettings.labels[GameSettings.lang] ?? GameSettings.labels[Language.en]!;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -731,6 +843,9 @@ void _openRules() {
       if (start < 6 && curr == 13) curr = 0;
       if (start > 6 && curr == 6) curr = 7;
       
+      //AudioManager().playSfx(AudioManager.stoneDrop); 
+      await Future.delayed(Duration(milliseconds: 300));
+      
       HapticFeedback.lightImpact();
       _stoneAnimController.forward(from: 0);
       
@@ -785,7 +900,111 @@ void _openRules() {
     }
   }
 
+
+// Основная функция хода ИИ
   void _aiMove() async {
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (!mounted || animating) return;
+
+    // Определяем глубину просчета в зависимости от сложности
+    // Легко: 2 хода, Средне: 4 хода, Сложно: 6-8 ходов
+    int depth = 2;
+    if (GameSettings.difficulty == Difficulty.medium) depth = 4;
+    if (GameSettings.difficulty == Difficulty.hard) depth = 8;
+
+    int bestMove = -1;
+    int bestValue = -999;
+
+    // Проверяем все возможные лунки ИИ (7-12)
+    for (int i = 7; i < 13; i++) {
+      if (board[i] > 0) {
+        // Копируем доску для симуляции
+        List<int> simBoard = List.from(board);
+        int value = _minimax(simBoard, depth, false, -1000, 1000);
+        
+        if (value > bestValue) {
+          bestValue = value;
+          bestMove = i;
+        }
+      }
+    }
+
+    if (bestMove != -1) {
+      _move(bestMove);
+    } else if (_checkGameOver()) {
+      _showGameOverDialog();
+    }
+  }
+
+  // Алгоритм Minimax с Альфа-Бето отсечением
+  int _minimax(List<int> currentBoard, int depth, bool isMaximizing, int alpha, int beta) {
+    if (depth == 0 || _isTerminal(currentBoard)) {
+      // Оценка позиции: разница в Калахах
+      return currentBoard[13] - currentBoard[6];
+    }
+
+    if (isMaximizing) {
+      int maxEval = -1000;
+      for (int i = 7; i < 13; i++) {
+        if (currentBoard[i] == 0) continue;
+        List<int> nextBoard = _simulateMove(currentBoard, i);
+        int eval = _minimax(nextBoard, depth - 1, false, alpha, beta);
+        maxEval = max(maxEval, eval);
+        alpha = max(alpha, eval);
+        if (beta <= alpha) break; // Отсечение
+      }
+      return maxEval;
+    } else {
+      int minEval = 1000;
+      for (int i = 0; i < 6; i++) {
+        if (currentBoard[i] == 0) continue;
+        List<int> nextBoard = _simulateMove(currentBoard, i);
+        int eval = _minimax(nextBoard, depth - 1, true, alpha, beta);
+        minEval = min(minEval, eval);
+        beta = min(beta, eval);
+        if (beta <= alpha) break; // Отсечение
+      }
+      return minEval;
+    }
+  }
+
+  List<int> _simulateMove(List<int> b, int start) {
+    List<int> newBoard = List.from(b);
+    int stones = newBoard[start];
+    newBoard[start] = 0;
+    int curr = start;
+
+    while (stones > 0) {
+      curr = (curr + 1) % 14;
+      // Правила пропуска чужих Калахов
+      if (start < 6 && curr == 13) curr = 0;
+      if (start > 6 && curr == 6) curr = 7;
+      newBoard[curr]++;
+      stones--;
+    }
+
+    // Логика захвата в симуляции
+    if (curr != 6 && curr != 13 && newBoard[curr] == 1) {
+      bool ownSide = start < 6 ? curr < 6 : (curr > 6 && curr < 13);
+      if (ownSide) {
+        int opposite = 12 - curr;
+        if (newBoard[opposite] > 0) {
+          int kalah = start < 6 ? 6 : 13;
+          newBoard[kalah] += newBoard[opposite] + 1;
+          newBoard[opposite] = 0;
+          newBoard[curr] = 0;
+        }
+      }
+    }
+    return newBoard;
+  }
+
+  bool _isTerminal(List<int> b) {
+    return b.sublist(0, 6).every((v) => v == 0) || b.sublist(7, 13).every((v) => v == 0);
+  }
+
+
+ /* void _aiMove() async {
     await Future.delayed(const Duration(milliseconds: 800));
     
     // Проверяем, есть ли ходы
@@ -804,4 +1023,5 @@ void _openRules() {
       _showGameOverDialog();
     }
   }
+  */
 }

@@ -9,7 +9,14 @@ class GameSettings {
   static Language lang = Language.en;
   static Difficulty difficulty = Difficulty.medium;
   static VisualMode visualMode = VisualMode.stonesAndNumbers;
-  static const String appVersion = "1.2.0";
+  static const String appVersion = "1.0.0";
+ 
+  static bool isSoundOn = true;
+  static bool isMusicOn = true;
+  static double musicVolume = 0.5;
+  static double sfxVolume = 0.8;
+  
+  // Не забудь добавить переводы для новых пунктов меню в Label
 
   static const Map<Language, Map<String, String>> labels = {
     Language.en: {
@@ -34,28 +41,43 @@ class GameSettings {
       'p2': 'Player 2',
       'play_again': 'Play Again',
       'rules_text': '''
-📋 OBJECTIVE:
+🎯 OBJECTIVE:
+
 Collect more stones in your Kalah (large pit) than your opponent.
 
 🎮 GAME SETUP:
-• Board has 12 small pits (6 per player) and 2 Kalahs
-• Each small pit starts with 4 stones
-• Your side: bottom row + right Kalah
-• Opponent's side: top row + left Kalah
 
-🎯 HOW TO PLAY:
-1. Pick any pit on YOUR side with stones
-2. Distribute stones counter-clockwise, one per pit
-3. Include YOUR Kalah, skip opponent's Kalah
-4. If last stone lands in YOUR Kalah → go again!
-5. If last stone lands in YOUR empty pit → capture that stone + all stones from opposite pit into your Kalah
+• The board has 12 small pits (6 per player) and 2 Kalahs (large pits).
+• At the start of the game, each small pit contains 4 stones.
+• Your side: bottom row + right Kalah (large pit).
+• Opponent’s side: top row + left Kalah (large pit).
 
-🏁 GAME ENDS:
-When one player's side is empty. Opponent collects remaining stones. Highest score wins!
+▶️ HOW TO PLAY:
+
+Choose and tap any pit with stones on YOUR side.
+
+Stones are distributed counterclockwise, one stone per pit.
+
+During a move, stones are placed into all pits except the opponent’s Kalah.
+
+If the last stone lands in YOUR Kalah, you get another turn!
+
+If the last stone lands in an empty pit on YOUR side, that stone and all stones from the opposite pit are moved to your Kalah.
+
+🏁 END OF THE GAME:
+
+When one player’s side is empty, the game ends.
+The player with more stones wins!
 
 💡 STRATEGY TIP:
-Try to land your last stone in your Kalah for another turn!
-''',
+
+Try to make your last stone land in your Kalah to earn an extra turn!
+'''
+,'music': 'Music',
+    'sound': 'Sound Effects',
+    'volume': 'Volume',
+    'exit_confirm_title': 'Leave Game?',
+    'exit_confirm_desc': 'Are you sure you want to exit?',
     },
     Language.ru: {
       'title': 'МАНКАЛА',
@@ -100,7 +122,12 @@ Try to land your last stone in your Kalah for another turn!
 
 💡 СОВЕТ ПО СТРАТЕГИИ:
 Старайтесь, чтобы последний камень попал в вашу Калаху для дополнительного хода!
-''',
+''', 
+'music': 'Музыка',
+    'sound': 'Звуки',
+    'volume': 'Громкость',
+    'exit_confirm_title': 'Выйти из игры?',
+    'exit_confirm_desc': 'Вы уверены? Прогресс будет потерян.',
     },
     Language.de: {
       'title': 'MANCALA',
@@ -124,28 +151,43 @@ Try to land your last stone in your Kalah for another turn!
       'p2': 'Spieler 2',
       'play_again': 'Nochmal spielen',
       'rules_text': '''
-📋 ZIEL:
-Sammle mehr Steine in deiner Kalah (großes Spielfeld) als dein Gegner.
+🇩🇪 Deutsch
+🎯 ZIEL:
+
+Sammle mehr Steine in deiner Kalah (große Mulde) als dein Gegner.
 
 🎮 SPIELAUFBAU:
-• Das Spielbrett hat 12 kleine Mulden (6 pro Spieler) und 2 Kalahs
-• Jede kleine Mulde startet mit 4 Steinen
-• Deine Seite: untere Reihe + rechte Kalah
-• Gegnerseite: obere Reihe + linke Kalah
 
-🎯 SPIELABLAUF:
-1. Wähle eine Mulde auf DEINER Seite mit Steinen
-2. Verteile die Steine gegen den Uhrzeigersinn, einen pro Mulde
-3. Schließe DEINE Kalah ein, überspringe die gegnerische Kalah
-4. Wenn der letzte Stein in DEINER Kalah landet → nochmal ziehen!
-5. Wenn der letzte Stein in DEINER leeren Mulde landet → erobere diesen Stein + alle Steine aus der gegenüberliegenden Mulde in deine Kalah
+• Das Spielbrett hat 12 kleine Mulden (6 pro Spieler) und 2 Kalahs (große Mulden).
+• Zu Beginn liegen 4 Steine in jeder kleinen Mulde.
+• Deine Seite: untere Reihe + rechte Kalah (große Mulde).
+• Gegnerische Seite: obere Reihe + linke Kalah (große Mulde).
+
+▶️ SPIELABLAUF:
+
+Wähle eine Mulde mit Steinen auf DEINER Seite und tippe sie an.
+
+Die Steine werden gegen den Uhrzeigersinn, jeweils ein Stein pro Mulde, verteilt.
+
+Während eines Zuges werden Steine in alle Mulden gelegt, außer in die Kalah des Gegners.
+
+Landet der letzte Stein in DEINER Kalah, darfst du noch einmal ziehen!
+
+Landet der letzte Stein in einer leeren Mulde auf DEINER Seite, werden dieser Stein und alle Steine aus der gegenüberliegenden Mulde in deine Kalah gelegt.
 
 🏁 SPIELENDE:
-Wenn eine Spielerseite leer ist. Der Gegner sammelt die restlichen Steine. Höchste Punktzahl gewinnt!
 
-💡 STRATEGIE-TIPP:
-Versuche, deinen letzten Stein in deiner Kalah zu platzieren für einen weiteren Zug!
-''',
+Sobald eine Spielerseite leer ist, endet das Spiel.
+Der Spieler mit den meisten Steinen gewinnt!
+
+💡 STRATEGIETIPP:
+
+Versuche, den letzten Stein in deine Kalah zu legen, um einen zusätzlichen Zug zu erhalten!
+''','music': 'Musik',
+    'sound': 'Töne',
+    'volume': 'Lautstärke',
+    'exit_confirm_title': 'Spiel verlassen?',
+    'exit_confirm_desc': 'Bist du sicher? Fortschritt geht verloren.',
     },
   };
 }
