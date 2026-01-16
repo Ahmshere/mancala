@@ -7,6 +7,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'animations.dart'; // Новый файл для анимаций
 import 'audio_manager.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/foundation.dart';
+import 'package:sensors_plus/sensors_plus.dart';
+import 'dart:async';
 // my_email: prudnikov.michael@aol.com
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -531,6 +534,22 @@ class _MancalaGameState extends State<MancalaGame> with TickerProviderStateMixin
   bool animating = false;
   int? lastDrop;
   late AnimationController _stoneAnimController;
+  bool isAiThinking = false;
+  int? aiHighlightIndex; // Индекс лунки, которую "рассматривает" ИИ
+void _runAiThinkingAnimation() async {
+  int current = 7; // Начинаем с первой лунки ИИ
+  while (isAiThinking) {
+    if (!mounted) return;
+    setState(() {
+      aiHighlightIndex = current;
+    });
+    await Future.delayed(const Duration(milliseconds: 150)); // Скорость перебора
+    current = current >= 12 ? 7 : current + 1;
+  }
+  setState(() {
+    aiHighlightIndex = null; // Сбрасываем подсветку после раздумий
+  });
+}
 void _confirmExit() {
     var txt = GameSettings.labels[GameSettings.lang] ?? GameSettings.labels[Language.en]!;
     showDialog(
@@ -855,39 +874,60 @@ void _openRules() {
       ),
     );
   }
-
-  Widget _buildPit(int i) {
-    bool active = (isP1Turn && i < 6 && board[i] > 0) || 
-                  (!isP1Turn && widget.mode == GameMode.pvp && i > 6 && i < 13 && board[i] > 0);
-    
-    return GestureDetector(
-      onTap: () => active && !animating ? _move(i) : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 90, height: 90, margin: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: lastDrop == i ? Colors.white10 : Colors.black38, 
-          shape: BoxShape.circle, 
-          border: Border.all(
-            color: active ? Colors.amber : Colors.black45, 
-            width: active ? 4 : 3
-          ),
-          boxShadow: active 
-            ? [const BoxShadow(color: Colors.amber, blurRadius: 8, spreadRadius: 1)]
-            : [const BoxShadow(color: Colors.black26, blurRadius: 4)]
+Widget _buildPit(int i) {
+  bool isHighlightedByAi = aiHighlightIndex == i;
+  bool active = (isP1Turn && i < 6 && board[i] > 0) || 
+                (!isP1Turn && widget.mode == GameMode.pvp && i > 6 && i < 13 && board[i] > 0);
+  
+  return GestureDetector(
+    onTap: () => active && !animating ? _move(i) : null,
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      width: 90, height: 90, margin: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: isHighlightedByAi 
+            ? Colors.amber.withOpacity(0.3) 
+            : (lastDrop == i ? Colors.white10 : Colors.black38), 
+        shape: BoxShape.circle, 
+        border: Border.all(
+          color: isHighlightedByAi 
+              ? Colors.amberAccent 
+              : (active ? Colors.amber : Colors.black45), 
+          width: isHighlightedByAi ? 5 : (active ? 4 : 3)
         ),
+      ),
+      child: Center(
         child: Stack(
           alignment: Alignment.center,
           children: [
+            // 1. Сначала рисуем камни (они будут на заднем плане)
             _buildStones(board[i], false),
-            Text("${board[i]}", 
-              style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Color(0xFFFFD54F),
-              shadows: [Shadow(color: Colors.black, blurRadius: 8, offset: Offset(2, 2))])),
+
+            // 2. Затем рисуем цифру (она будет ПОВЕРХ камней)
+            if (GameSettings.visualMode == VisualMode.numbersOnly || 
+                GameSettings.visualMode == VisualMode.stonesAndNumbers)
+              IgnorePointer( // Чтобы текст не перехватывал нажатия
+                child: Text(
+                  '${board[i]}',
+                  style: GoogleFonts.cinzel( // Используем твой шрифт для стиля
+                    textStyle: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFFFFD54F), // Желтоватый (Amber 300)
+                      shadows: [
+                        const Shadow(blurRadius: 10, color: Colors.black),
+                        Shadow(blurRadius: 2, color: Colors.black.withOpacity(0.8), offset: const Offset(1, 1)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildKalah(int i, Color color) {
     return Container(
@@ -982,39 +1022,52 @@ void _openRules() {
 
 
 // Основная функция хода ИИ
-  void _aiMove() async {
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (!mounted || animating) return;
+ void _aiMove() async {
+  if (!mounted || isP1Turn || animating) return;
+// ВКЛЮЧАЕМ анимацию
+  setState(() {
+    isAiThinking = true; 
+  });
+  _runAiThinkingAnimation(); // Запуск визуального перебора
+  // Имитация раздумий (чтобы анимация была видна, даже если ИИ ответил мгновенно)
+  await Future.delayed(const Duration(milliseconds: 500));
+  int bestMove = -1;
+  int bestValue = -20000;
+  
+  // Выбираем глубину в зависимости от сложности
+  int maxDepth;
+  switch (GameSettings.difficulty) {
+    case Difficulty.easy: maxDepth = 1; break;
+    case Difficulty.medium: maxDepth = 3; break;
+    case Difficulty.hard: maxDepth = 6; break; // Глубина 9 с Alpha-Beta летает
+  }
 
-    // Определяем глубину просчета в зависимости от сложности
-    // Легко: 2 хода, Средне: 6, Сложно: 8-10 ходов
-    int depth = 4; // Базовая глубина
-    if (GameSettings.difficulty == Difficulty.medium) depth = 6;
-    if (GameSettings.difficulty == Difficulty.hard) depth = 10; // 10 - это уже уровень чемпиона
+  // Небольшая задержка, чтобы игрок понял, что ИИ "думает"
+  await Future.delayed(const Duration(milliseconds: 600));
 
-    int bestMove = -1;
-    int bestValue = -999;
-
-    // Проверяем все возможные лунки ИИ (7-12)
-    for (int i = 7; i < 13; i++) {
-      if (board[i] > 0) {
-        // Копируем доску для симуляции
-        List<int> simBoard = List.from(board);
-        int value = _minimax(simBoard, depth, false, -1000, 1000);
-        
-        if (value > bestValue) {
-          bestValue = value;
-          bestMove = i;
-        }
+  List<int> currentBoard = List.from(board);
+  
+  for (int i = 7; i < 13; i++) {
+    if (currentBoard[i] > 0) {
+      var result = _simulateMoveDetailed(currentBoard, i);
+      int moveValue = _minimax(result.board, maxDepth, result.extraTurn, -20000, 20000);
+      
+      if (moveValue > bestValue) {
+        bestValue = moveValue;
+        bestMove = i;
       }
     }
-
-    if (bestMove != -1) {
-      _move(bestMove);
-    } else if (_checkGameOver()) {
-      _showGameOverDialog();
-    }
   }
+// ВЫКЛЮЧАЕМ анимацию перед совершением хода
+  if (mounted) {
+    setState(() {
+      isAiThinking = false;
+    });
+  }
+  if (bestMove != -1) {
+    _move(bestMove);
+  }
+}
 
 // сложность ии
 // Используем Record (новое в Dart), чтобы вернуть два значения сразу
@@ -1034,11 +1087,9 @@ void _openRules() {
     stones--;
   }
 
-  // ПРОВЕРКА НА ДОПОЛНИТЕЛЬНЫЙ ХОД
-  // Если последний камень попал в свою Калаху
   bool extraTurn = (start < 6 && curr == 6) || (start > 6 && curr == 13);
 
-  // Логика захвата (только если это не была Калаха)
+  // Захват (Capture)
   if (!extraTurn && newBoard[curr] == 1) {
     bool ownSide = start < 6 ? curr < 6 : (curr > 6 && curr < 13);
     if (ownSide) {
@@ -1051,10 +1102,12 @@ void _openRules() {
       }
     }
   }
-
+  
+  // Мы НЕ переносим остатки камней. 
+  // Но ИИ должен знать, что игра закончится, если чья-то сторона пуста.
   return (board: newBoard, extraTurn: extraTurn);
 }
-
+/*
 int _evaluatePosition(List<int> b) {
   // 1. Базовый счет (разница в Калахах) - вес 15
   int score = (b[13] - b[6]) * 15;
@@ -1095,46 +1148,85 @@ int _evaluatePosition(List<int> b) {
 
   return score;
 }
+*/
+// Функция оценки (душа уровня Hard)
+int _evaluatePosition(List<int> b) {
+  // 1. Разница в Калахах (основной вес)
+  int score = (b[13] - b[6]) * 100;
+
+  // 2. БОНУС за возможность сделать доп. ход прямо сейчас
+  // ИИ должен "обожать" цепочки ходов
+  for (int i = 7; i < 13; i++) {
+    if (b[i] > 0 && (i + b[i]) % 14 == 13) {
+      score += 40; // Даем высокий приоритет доп. ходам
+    }
+  }
+
+  // 3. БОНУС за близость к своей Калахе
+  // Чем ближе камни к дому, тем они безопаснее
+  for (int i = 7; i < 13; i++) {
+    score += (b[i] * (i - 6)); 
+  }
+
+  // 4. ЗАХВАТЫ (Охота и Защита)
+  for (int i = 0; i < 6; i++) {
+    // Если у игрока пустая лунка и напротив есть камни ИИ
+    if (b[i] == 0 && b[12 - i] > 0) {
+      score -= (b[12 - i] * 15); // Штраф: ИИ рискует потерять камни
+    }
+    // Если у ИИ пустая лунка и напротив есть камни игрока
+    if (b[12 - i] == 0 && b[i] > 0) {
+      score += (b[i] * 12); // Бонус: ИИ может захватить
+    }
+  }
+
+  return score;
+}
   // Алгоритм Minimax с Альфа-Бето отсечением
- int _minimax(List<int> currentBoard, int depth, bool isMaximizing, int alpha, int beta) {
+// Оптимизированный Minimax с Alpha-Beta отсечением
+int _minimax(List<int> currentBoard, int depth, bool isMaximizing, int alpha, int beta) {
   if (depth == 0 || _isTerminal(currentBoard)) {
-    return _evaluatePosition(currentBoard); // Используем продвинутую оценку
+    return _evaluatePosition(currentBoard);
   }
 
   if (isMaximizing) {
-    int maxEval = -1000;
-    for (int i = 7; i < 13; i++) {
+    int maxEval = -10000;
+    // Проверяем ходы ИИ (справа налево обычно эффективнее для отсечения)
+    for (int i = 12; i >= 7; i--) {
       if (currentBoard[i] == 0) continue;
 
-      // Симулируем ход
-      var result = _simulateMoveDetailed(currentBoard, i); 
-      List<int> nextBoard = result.board;
-      bool extraTurn = result.extraTurn;
-
-      // ЕСЛИ extraTurn = true, ИИ ходит СНОВА (isMaximizing остается true)
-      // Глубину уменьшаем, чтобы не зациклиться, но даем шанс найти комбинацию
-      int eval = _minimax(nextBoard, extraTurn ? depth : depth - 1, extraTurn, alpha, beta);
+      var result = _simulateMoveDetailed(currentBoard, i);
+      // Если доп. ход, глубина уменьшается медленнее (или не уменьшается)
+      int eval = _minimax(
+        result.board, 
+        result.extraTurn ? depth - 1 : depth - 1, 
+        result.extraTurn, 
+        alpha, 
+        beta
+      );
       
       maxEval = max(maxEval, eval);
       alpha = max(alpha, eval);
-      if (beta <= alpha) break;
+      if (beta <= alpha) break; // Вот оно, отсечение!
     }
     return maxEval;
   } else {
-    int minEval = 1000;
+    int minEval = 10000;
     for (int i = 0; i < 6; i++) {
       if (currentBoard[i] == 0) continue;
 
       var result = _simulateMoveDetailed(currentBoard, i);
-      List<int> nextBoard = result.board;
-      bool extraTurn = result.extraTurn;
-
-      // ЕСЛИ игроку выпал доп. ход, ИИ продолжает минимизировать (isMaximizing = false)
-      int eval = _minimax(nextBoard, extraTurn ? depth : depth - 1, !extraTurn, alpha, beta);
+      int eval = _minimax(
+        result.board, 
+        result.extraTurn ? depth - 1 : depth - 1, 
+        !result.extraTurn, 
+        alpha, 
+        beta
+      );
       
       minEval = min(minEval, eval);
       beta = min(beta, eval);
-      if (beta <= alpha) break;
+      if (beta <= alpha) break; // И здесь отсечение!
     }
     return minEval;
   }
