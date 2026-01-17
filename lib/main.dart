@@ -918,7 +918,7 @@ Widget _buildPit(int i) {
               // Анимированное увеличение цифры
               AnimatedScale(
                 scale: isTarget ? 1.6 : 1.0, // Увеличиваем в 1.6 раза
-                duration: const Duration(milliseconds: 400),
+                duration: const Duration(milliseconds: 500),
                 curve: Curves.elasticOut, // Эффект пружинки
                 child: Text(
                   '${board[i]}', 
