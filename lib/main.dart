@@ -436,30 +436,50 @@ Widget _buildVolumeSlider({required double value, required Function(double) onCh
                                         ),
                                       ),
                                     ),
-                                    Text(
-                                      txt['title'] ?? 'MANCALA',
-                                      style: GoogleFonts.cinzel(
-                                        textStyle: TextStyle(
-                                          fontSize: isLandscape ? 50 : 65,
-                                          fontWeight: FontWeight.normal,
-                                          color: const Color(0xFFFFD54F),
-                                          letterSpacing: 8,
-                                          shadows: [
-                                           // Тень, которая меняет цвет в такт анимации
+                                   Stack(
+  children: [
+    // Внешнее "дышащее" свечение (контур вокруг букв)
+    Text(
+      txt['title'] ?? 'MANCALA',
+      style: GoogleFonts.cinzel(
+        textStyle: TextStyle(
+          fontSize: isLandscape ? 50 : 65,
+          letterSpacing: 8,
+          foreground: Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 12
+            ..color = Color.lerp(Colors.orange, Colors.amber, _glowAnimation.value)!.withOpacity(0.3 * _glowAnimation.value)
+            ..maskFilter = MaskFilter.blur(BlurStyle.normal, 15 * _glowAnimation.value + 5),
+        ),
+      ),
+    ),
+    // Основной текст
+    Text(
+      txt['title'] ?? 'MANCALA',
+      style: GoogleFonts.cinzel(
+        textStyle: TextStyle(
+          fontSize: isLandscape ? 50 : 65,
+          fontWeight: FontWeight.normal,
+          color: const Color(0xFFFFD54F),
+          letterSpacing: 8,
+          shadows: [
+            // Тень пульсирует и меняет оттенок от черного к медному
             Shadow(
-              color: Color.lerp(Colors.black, Colors.orangeAccent, _glowAnimation.value)!.withOpacity(0.8),
-              blurRadius: 10 + (_glowAnimation.value * 10),
-              offset: const Offset(0, 5),
+              color: Color.lerp(Colors.black, Colors.deepOrange, _glowAnimation.value)!.withOpacity(0.8),
+              blurRadius: 12 + (8 * _glowAnimation.value),
+              offset: Offset(0, 4 + 2 * _glowAnimation.value),
             ),
-            // Внутренний "блик"
+            // Легкий внутренний блик
             Shadow(
-              color: Colors.white.withOpacity(0.3 * _glowAnimation.value),
+              color: Colors.white.withOpacity(0.2 * _glowAnimation.value),
               blurRadius: 2,
             ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
+          ],
+        ),
+      ),
+    ),
+  ],
+)
                                   ],
                                 ),
                               ),
@@ -1036,8 +1056,19 @@ Widget _buildPit(int i) {
     });
   }
   if (bestMove != -1) {
+    // Ждем, пока анимация физического перемещения камней закончится
+    await Future.delayed(const Duration(milliseconds: 500)); 
     _move(bestMove);
+    
+    // Ждем еще немного после завершения всех падений камней
+    await Future.delayed(const Duration(seconds: 2)); 
+    if (mounted) {
+      setState(() {
+        lastDrop = -1; // ВОТ ТУТ МЫ УБИРАЕМ ЖЕЛТЫЙ КРУГ
+      });
+    }
   }
+}
 }
 
 // сложность ии
@@ -1130,7 +1161,7 @@ int _evaluatePosition(List<int> b) {
     randomness = Random().nextInt(40) - 2; // Ошибка до 20 очков
   }
   // 1. Разница в Калахах (основной вес)
-  int score = (b[13] - b[6]) * 100 +randomness; /* Чтобы он стал «глупее», в твоем методе _evaluatePosition просто поменяй множитель в первой строке: int score = (b[13] - b[6]) * 10; (вместо 100). Тогда он будет меньше дорожить камнями в Калахе.*/
+  int score = (b[13] - b[6]) * 15 +randomness; /* Чтобы он стал «глупее», в твоем методе _evaluatePosition просто поменяй множитель в первой строке: int score = (b[13] - b[6]) * 10; (вместо 100). Тогда он будет меньше дорожить камнями в Калахе.*/
 
   // 2. БОНУС за возможность сделать доп. ход прямо сейчас
   // ИИ должен "обожать" цепочки ходов
@@ -1265,4 +1296,3 @@ int _minimax(List<int> currentBoard, int depth, bool isMaximizing, int alpha, in
     }
   }
   */
-}

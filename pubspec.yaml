@@ -40,3 +40,8 @@ flutter_icons:
   android: true
   ios: true
   image_path: "assets/icons/main_ico.png"
+
+  fonts:
+  - family: Cinzel
+    fonts:
+      - asset: assets/fonts/Cinzel-Bold.ttf
