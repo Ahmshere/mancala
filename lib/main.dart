@@ -1050,8 +1050,8 @@ void _aiMove() async {
   int maxDepth;
   switch (GameSettings.difficulty) {
     case Difficulty.easy: maxDepth = 1; break;
-    case Difficulty.medium: maxDepth = 2; break;
-    case Difficulty.hard: maxDepth = 4; break;
+    case Difficulty.medium: maxDepth = 3; break;
+    case Difficulty.hard: maxDepth = 5; break;
     default: maxDepth = 2;
   }
 

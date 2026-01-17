@@ -278,15 +278,15 @@ class StoneConfetti extends StatefulWidget {
 
 class _StoneConfettiState extends State<StoneConfetti> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  // Генерируем список из 60 уникальных частиц
   final List<_Particle> particles = List.generate(60, (i) => _Particle());
 
   @override
   void initState() {
     super.initState();
-    // Делаем анимацию бесконечной (repeat), чтобы камни могли падать волнами
-    // Цикл анимации: 4 секунды от верха до низа, повторяется бесконечно
-    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
+    _controller = AnimationController(
+      vsync: this, 
+      duration: const Duration(seconds: 4)
+    )..repeat();
   }
 
   @override
@@ -303,22 +303,41 @@ class _StoneConfettiState extends State<StoneConfetti> with SingleTickerProvider
         final size = MediaQuery.of(context).size;
         return Stack(
           children: particles.map((p) {
-            // Рассчитываем позицию: прогресс * скорость
             double progress = _controller.value;
-            double currentY = (p.y + progress * p.fallSpeed) * size.height;
-            double currentRotation = progress * p.rotationSpeed;
+            // Рассчитываем падение
+            double currentY = ((p.y + progress * p.fallSpeed) % 1.5 - 0.2) * size.height;
+            // Вращение как "колесо"
+            double rotationZ = progress * p.rotationSpeed;
+            // Вращение как "монетка" (перевороты)
+            double rotationX = progress * p.spinSpeed;
 
             return Positioned(
               left: p.x * size.width,
               top: currentY,
-              child: Transform.rotate(
-                angle: currentRotation,
+              child: Transform(
+                // Создаем 3D-эффект
+                transform: Matrix4.identity()
+                  ..setEntry(3, 2, 0.001) // Перспектива
+                  ..rotateX(rotationX)    // Кувырок вперед
+                  ..rotateZ(rotationZ),   // Вращение в плоскости
+                alignment: Alignment.center,
                 child: Container(
-                  width: 12, height: 12, // Чуть увеличили, как и основные камни
+                  width: p.size, 
+                  height: p.size,
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle, 
+                    shape: BoxShape.circle,
                     color: p.color,
-                    boxShadow: [BoxShadow(color: Colors.black45, blurRadius: 3, offset: Offset(1,1))]
+                    gradient: RadialGradient(
+                      colors: [p.color.withOpacity(0.7), p.color],
+                      center: const Alignment(-0.3, -0.3),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black26, 
+                        blurRadius: 2, 
+                        offset: Offset(cos(rotationZ), sin(rotationZ))
+                      )
+                    ],
                   ),
                 ),
               ),
@@ -330,20 +349,27 @@ class _StoneConfettiState extends State<StoneConfetti> with SingleTickerProvider
   }
 }
 
-/* Вспомогательный класс для описания свойств каждой частицы конфетти */
 class _Particle {
-  double x = Random().nextDouble(); // Случайная позиция по горизонтали (0..1)
-  double y = -0.2 - Random().nextDouble(); // Начинают выше экрана
-  double rotationSpeed = (Random().nextDouble() - 0.5) * 15; // Скорость вращения. rotationSpeed: определяет количество оборотов вокруг оси за цикл анимации
-  double fallSpeed = 1.5 + Random().nextDouble() * 2.0; // Разная скорость падения.  fallSpeed: 1.5 - медленно, 3.5 - быстро. Определяет, как глубоко упадет за цикл.
+  double x = Random().nextDouble();
+  double y = Random().nextDouble() * -1; // Разбрасываем начальную высоту
+  double size = 8.0 + Random().nextDouble() * 6.0; // Разный размер камней
+  
+  double rotationSpeed = (Random().nextDouble() - 0.5) * 10; // Вращение вокруг центра
+  double spinSpeed = Random().nextDouble() * 12; // Скорость "кувырков"
+  double fallSpeed = 1.0 + Random().nextDouble() * 1.5; // Скорость падения
+  
   Color color = [
     Colors.tealAccent, 
     Colors.orangeAccent, 
     Colors.redAccent, 
     Colors.blueAccent, 
-    Colors.amberAccent
-  ][Random().nextInt(5)];
+    Colors.amberAccent,
+    Colors.purpleAccent,
+  ][Random().nextInt(6)];
 }
+
+/* Вспомогательный класс для описания свойств каждой частицы конфетти */
+
 /*
 Хочешь больше камней в конфетти? Измени List.generate(60, ...) на 100.
 
