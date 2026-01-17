@@ -46,6 +46,9 @@ class _MainMenuState extends State<MainMenu> with SingleTickerProviderStateMixin
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
   late Animation<double> _glowAnimation;
+  double _parallaxX = 0;
+  double _parallaxY = 0;
+  StreamSubscription? _accelSubscription;
 
   @override
   void initState() {
@@ -68,10 +71,18 @@ class _MainMenuState extends State<MainMenu> with SingleTickerProviderStateMixin
     );
 
     _titleController.forward();
+    _accelSubscription = accelerometerEvents.listen((event) {
+    setState(() {
+      _parallaxX = event.x * 2; // Чувствительность
+      _parallaxY = event.y * 2;
+    });
+  });
+
   }
 
   @override
   void dispose() {
+    _accelSubscription?.cancel(); // Обязательно закрываем!
     _titleController.dispose();
     super.dispose();
   }
@@ -368,143 +379,112 @@ Widget _buildVolumeSlider({required double value, required Function(double) onCh
   Widget build(BuildContext context) {
     final String langName = GameSettings.lang.name;
     var txt = GameSettings.labels[GameSettings.lang] ?? GameSettings.labels[Language.en]!;
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/background.png'),
+  return Scaffold(
+    body: Stack( // Используем Stack для слоев
+      children: [
+        // СЛОЙ 1: Фон с параллаксом
+        AnimatedPositioned(
+          duration: const Duration(milliseconds: 100),
+          // Смещаем фон чуть-чуть в зависимости от наклона
+          left: -20 + _parallaxX,
+          top: -20 - _parallaxY,
+          right: -20 - _parallaxX,
+          bottom: -20 + _parallaxY,
+          child: Image.asset(
+            'assets/images/background.png',
             fit: BoxFit.cover,
-            colorFilter: ColorFilter.mode(Colors.black54, BlendMode.darken),
+            // Затемнение фона
+            color: Colors.black.withOpacity(0.5),
+            colorBlendMode: BlendMode.darken,
           ),
         ),
-        child: Stack(
-          children: [
-            SafeArea(
-              child: OrientationBuilder(
-                builder: (context, orientation) {
-                  bool isLandscape = orientation == Orientation.landscape;
-                  return Center(
-                    child: Flex(
-                      direction: isLandscape ? Axis.horizontal : Axis.vertical,
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        // АНИМИРОВАННОЕ НАЗВАНИЕ
-                        AnimatedBuilder(
-                          animation: _titleController,
-                          builder: (context, child) {
-                            return FadeTransition(
-                              opacity: _fadeAnimation,
-                              child: ScaleTransition(
-                                scale: _scaleAnimation,
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                                    child: Stack(
-                                      children: [
-                                        // Магическое свечение
-                                        Text(
-                                          txt['title']?? 'MANCALA',
-                                          style: GoogleFonts.cinzel(
-                                            textStyle: TextStyle(
-                                              fontSize: isLandscape ? 50 : 65,
-                                              fontWeight: FontWeight.normal,
-                                              foreground: Paint()
-                                                ..style = PaintingStyle.stroke
-                                                ..strokeWidth = 8
-                                                ..color = Colors.amber.withOpacity(_glowAnimation.value * 0.5)
-                                                ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20),
-                                              letterSpacing: 8,
-                                            ),
-                                          ),
+        SafeArea(
+          child: OrientationBuilder(
+            builder: (context, orientation) {
+              bool isLandscape = orientation == Orientation.landscape;
+              return Center(
+                child: Flex(
+                  direction: isLandscape ? Axis.horizontal : Axis.vertical,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // Твое анимированное название (MANCALA)
+                    AnimatedBuilder(
+                      animation: _titleController,
+                      builder: (context, child) {
+                        return FadeTransition(
+                          opacity: _fadeAnimation,
+                          child: ScaleTransition(
+                            scale: _scaleAnimation,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                child: Stack(
+                                  children: [
+                                    Text(
+                                      txt['title'] ?? 'MANCALA',
+                                      style: GoogleFonts.cinzel(
+                                        textStyle: TextStyle(
+                                          fontSize: isLandscape ? 50 : 65,
+                                          fontWeight: FontWeight.normal,
+                                          foreground: Paint()
+                                            ..style = PaintingStyle.stroke
+                                            ..strokeWidth = 8
+                                            ..color = Colors.amber.withOpacity(_glowAnimation.value * 0.5)
+                                            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20),
+                                          letterSpacing: 8,
                                         ),
-                                        // Основной текст
-                                        Text(
-                                          txt['title']?? 'MANCALA',
-                                          style: GoogleFonts.cinzel(
-                                            textStyle: TextStyle(
-                                              fontSize: isLandscape ? 50 : 65,
-                                              fontWeight: FontWeight.normal,
-                                              color: const Color(0xFFFFD54F),
-                                              letterSpacing: 8,
-                                              shadows: [
-                                                Shadow(
-                                                  color: Colors.black.withOpacity(0.8),
-                                                  blurRadius: 20,
-                                                  offset: const Offset(0, 5),
-                                                ),
-                                                const Shadow(
-                                                  color: Colors.orangeAccent,
-                                                  blurRadius: 2,
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ],
+                                      ),
                                     ),
-                                  ),
+                                    Text(
+                                      txt['title'] ?? 'MANCALA',
+                                      style: GoogleFonts.cinzel(
+                                        textStyle: TextStyle(
+                                          fontSize: isLandscape ? 50 : 65,
+                                          fontWeight: FontWeight.normal,
+                                          color: const Color(0xFFFFD54F),
+                                          letterSpacing: 8,
+                                          shadows: [
+                                            Shadow(color: Colors.black.withOpacity(0.8), blurRadius: 20, offset: const Offset(0, 5)),
+                                            const Shadow(color: Colors.orangeAccent, blurRadius: 2),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            );
-                          },
-                        ),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _menuBtn(txt['pvp']?? 'PVP', GameMode.pvp, isLandscape),
-                            const SizedBox(height: 15),
-                            _menuBtn(txt['ai']?? 'VS CPU', GameMode.ai, isLandscape),
-                            const SizedBox(height: 30),
-                            _buildDifficultyChips(),
-                          ],
-                        ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    // Твои кнопки PVP и VS CPU
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _menuBtn(txt['pvp'] ?? 'PVP', GameMode.pvp, isLandscape),
+                        const SizedBox(height: 15),
+                        _menuBtn(txt['ai'] ?? 'VS CPU', GameMode.ai, isLandscape),
+                        const SizedBox(height: 30),
+                        _buildDifficultyChips(),
                       ],
                     ),
-                  );
-                },
-              ),
-            ),
-            // Кнопка правил
-            Positioned(
-              top: 50,
-              left: 25,
-              child: IconButton(
-                icon: const Icon(Icons.help_outline, color: Color(0xFFFFD54F), size: 40),
-                onPressed: _openRules,
-              ),
-            ),
-            // Кнопка настроек
-            Positioned(
-              top: 50,
-              right: 25,
-              child: IconButton(
-                icon: const Icon(Icons.settings, color: Color(0xFFFFD54F), size: 40),
-                onPressed: _openSettings,
-              ),
-            ),
-            Positioned(
-              bottom: 20,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Text(
-                  "version: ${GameSettings.appVersion}", 
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.5),
-                    fontSize: 12,
-                    letterSpacing: 1.2,
-                  ),
+                  ],
                 ),
-              ),
-            ),
-          ],
+              );
+            },
+          ),
         ),
-      ),
-    );
-  }
+        
+        // Кнопки управления (Правила, Настройки, Версия)
+        Positioned(top: 50, left: 25, child: IconButton(icon: const Icon(Icons.help_outline, color: Color(0xFFFFD54F), size: 40), onPressed: _openRules)),
+        Positioned(top: 50, right: 25, child: IconButton(icon: const Icon(Icons.settings, color: Color(0xFFFFD54F), size: 40), onPressed: _openSettings)),
+        Positioned(bottom: 20, left: 0, right: 0, child: Center(child: Text("version: ${GameSettings.appVersion}", style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12)))),
+      ],
+    ),
+  );
+}
 
   Widget _menuBtn(String text, GameMode mode, bool isLandscape) {
     return ElevatedButton(
@@ -536,20 +516,8 @@ class _MancalaGameState extends State<MancalaGame> with TickerProviderStateMixin
   late AnimationController _stoneAnimController;
   bool isAiThinking = false;
   int? aiHighlightIndex; // Индекс лунки, которую "рассматривает" ИИ
-void _runAiThinkingAnimation() async {
-  int current = 7; // Начинаем с первой лунки ИИ
-  while (isAiThinking) {
-    if (!mounted) return;
-    setState(() {
-      aiHighlightIndex = current;
-    });
-    await Future.delayed(const Duration(milliseconds: 150)); // Скорость перебора
-    current = current >= 12 ? 7 : current + 1;
-  }
-  setState(() {
-    aiHighlightIndex = null; // Сбрасываем подсветку после раздумий
-  });
-}
+
+
 void _confirmExit() {
     var txt = GameSettings.labels[GameSettings.lang] ?? GameSettings.labels[Language.en]!;
     showDialog(
@@ -816,26 +784,41 @@ void _openRules() {
                 children: [
                   Column(
                     children: [
-                      const SizedBox(height: 20),
-                      Text(
-                        isP1Turn ? txt['p1_turn']! : (widget.mode == GameMode.ai ? txt['ai_turn']! : txt['p2_turn']!),
-                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFFFD54F))
-                      ),
-                      Expanded(child: Center(child: FittedBox(child: _buildBoard()))),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 20),
-                        child: TextButton.icon(
-                          onPressed: _confirmExit, // Теперь вызываем подтверждение
-                          icon: const Icon(Icons.exit_to_app, color: Colors.white70), 
-                          label: Text(txt['menu']!, style: const TextStyle(color: Colors.white70))
+                      const SizedBox(height: 10),
+                      AnimatedOpacity(
+            opacity: isAiThinking ? 0.5 : 1.0,
+            duration: const Duration(milliseconds: 500),
+            child: Text(
+              isP1Turn ? txt['p1_turn']! : (widget.mode == GameMode.ai ? txt['ai_turn']! : txt['p2_turn']!),
+              style: TextStyle( // УДАЛИЛИ const
+                fontSize: 24, 
+                fontWeight: FontWeight.bold, 
+                color: const Color(0xFFFFD54F),
+                shadows: [
+                  if (isAiThinking)
+                    const Shadow(color: Colors.amberAccent, blurRadius: 20),
+                ]
+              )
+            ),
+            ),
+           Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Center(
+                          child: FittedBox( // Этот виджет сожмет доску, чтобы она влезла
+                            fit: BoxFit.contain, 
+                            child: _buildBoard(),
+                          ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                ),
                   // САМА КНОПКА ИНСТРУКЦИИ
                   Positioned(
-                    top: 10,
-                    right: 10,
+                    top: 5,
+                    right: 5,
                     child: IconButton(
                       icon: const Icon(Icons.help_outline, color: Colors.amber, size: 35),
                       onPressed: _openRules, // Открывает правила со скроллбаром
@@ -875,60 +858,39 @@ void _openRules() {
     );
   }
 Widget _buildPit(int i) {
-  bool isHighlightedByAi = aiHighlightIndex == i;
+  // УДАЛИЛИ: bool isHighlightedByAi = aiHighlightIndex == i;
   bool active = (isP1Turn && i < 6 && board[i] > 0) || 
                 (!isP1Turn && widget.mode == GameMode.pvp && i > 6 && i < 13 && board[i] > 0);
   
   return GestureDetector(
-    onTap: () => active && !animating ? _move(i) : null,
+    onTap: () => active && !animating && !isAiThinking ? _move(i) : null,
     child: AnimatedContainer(
       duration: const Duration(milliseconds: 150),
       width: 90, height: 90, margin: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: isHighlightedByAi 
-            ? Colors.amber.withOpacity(0.3) 
-            : (lastDrop == i ? Colors.white10 : Colors.black38), 
+        color: (lastDrop == i ? Colors.white10 : Colors.black38), 
         shape: BoxShape.circle, 
         border: Border.all(
-          color: isHighlightedByAi 
-              ? Colors.amberAccent 
-              : (active ? Colors.amber : Colors.black45), 
-          width: isHighlightedByAi ? 5 : (active ? 4 : 3)
+          color: active ? Colors.amber : (lastDrop == i ? Colors.amberAccent : Colors.black45), 
+          width: active ? 4 : 3
         ),
       ),
       child: Center(
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // 1. Сначала рисуем камни (они будут на заднем плане)
             _buildStones(board[i], false),
-
-            // 2. Затем рисуем цифру (она будет ПОВЕРХ камней)
-            if (GameSettings.visualMode == VisualMode.numbersOnly || 
-                GameSettings.visualMode == VisualMode.stonesAndNumbers)
-              IgnorePointer( // Чтобы текст не перехватывал нажатия
-                child: Text(
-                  '${board[i]}',
-                  style: GoogleFonts.cinzel( // Используем твой шрифт для стиля
-                    textStyle: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: const Color(0xFFFFD54F), // Желтоватый (Amber 300)
-                      shadows: [
-                        const Shadow(blurRadius: 10, color: Colors.black),
-                        Shadow(blurRadius: 2, color: Colors.black.withOpacity(0.8), offset: const Offset(1, 1)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+            if (GameSettings.visualMode != VisualMode.stonesOnly)
+              Text('${board[i]}', style: GoogleFonts.cinzel(
+                textStyle: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFFFFD54F),
+                shadows: [Shadow(color: Colors.black, blurRadius: 4)])
+              )), 
           ],
         ),
       ),
     ),
   );
 }
-
   Widget _buildKalah(int i, Color color) {
     return Container(
       width: 100, height: 240, margin: const EdgeInsets.symmetric(horizontal: 15),
@@ -1028,7 +990,7 @@ Widget _buildPit(int i) {
   setState(() {
     isAiThinking = true; 
   });
-  _runAiThinkingAnimation(); // Запуск визуального перебора
+  //_runAiThinkingAnimation(); // Запуск визуального перебора
   // Имитация раздумий (чтобы анимация была видна, даже если ИИ ответил мгновенно)
   await Future.delayed(const Duration(milliseconds: 500));
   int bestMove = -1;
@@ -1151,8 +1113,15 @@ int _evaluatePosition(List<int> b) {
 */
 // Функция оценки (душа уровня Hard)
 int _evaluatePosition(List<int> b) {
+  // Добавляем элемент случайности в зависимости от сложности
+  int randomness = 0;
+  if (GameSettings.difficulty == Difficulty.easy) {
+    randomness = Random().nextInt(100) - 5; // Ошибка до 50 очков
+  } else if (GameSettings.difficulty == Difficulty.medium) {
+    randomness = Random().nextInt(40) - 2; // Ошибка до 20 очков
+  }
   // 1. Разница в Калахах (основной вес)
-  int score = (b[13] - b[6]) * 100;
+  int score = (b[13] - b[6]) * 100 +randomness; /* Чтобы он стал «глупее», в твоем методе _evaluatePosition просто поменяй множитель в первой строке: int score = (b[13] - b[6]) * 10; (вместо 100). Тогда он будет меньше дорожить камнями в Калахе.*/
 
   // 2. БОНУС за возможность сделать доп. ход прямо сейчас
   // ИИ должен "обожать" цепочки ходов

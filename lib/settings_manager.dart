@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 enum Language { ru, en, de }
-enum VisualMode { numbersOnly, stonesAndNumbers }
+enum VisualMode { numbersOnly, stonesAndNumbers , stonesOnly}
 enum Difficulty { easy, medium, hard }
 enum GameMode { pvp, ai }
 
