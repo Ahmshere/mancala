@@ -426,12 +426,12 @@ Widget _buildVolumeSlider({required double value, required Function(double) onCh
                                       style: GoogleFonts.cinzel(
                                         textStyle: TextStyle(
                                           fontSize: isLandscape ? 50 : 65,
-                                          fontWeight: FontWeight.normal,
+                                          fontWeight: FontWeight.bold,
                                           foreground: Paint()
                                             ..style = PaintingStyle.stroke
                                             ..strokeWidth = 8
                                             ..color = Colors.amber.withOpacity(_glowAnimation.value * 0.5)
-                                            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20),
+                                            ..maskFilter = MaskFilter.blur(BlurStyle.normal, 15 + (_glowAnimation.value * 10)), // Размытие расширяется
                                           letterSpacing: 8,
                                         ),
                                       ),
@@ -445,8 +445,17 @@ Widget _buildVolumeSlider({required double value, required Function(double) onCh
                                           color: const Color(0xFFFFD54F),
                                           letterSpacing: 8,
                                           shadows: [
-                                            Shadow(color: Colors.black.withOpacity(0.8), blurRadius: 20, offset: const Offset(0, 5)),
-                                            const Shadow(color: Colors.orangeAccent, blurRadius: 2),
+                                           // Тень, которая меняет цвет в такт анимации
+            Shadow(
+              color: Color.lerp(Colors.black, Colors.orangeAccent, _glowAnimation.value)!.withOpacity(0.8),
+              blurRadius: 10 + (_glowAnimation.value * 10),
+              offset: const Offset(0, 5),
+            ),
+            // Внутренний "блик"
+            Shadow(
+              color: Colors.white.withOpacity(0.3 * _glowAnimation.value),
+              blurRadius: 2,
+            ),
                                           ],
                                         ),
                                       ),
