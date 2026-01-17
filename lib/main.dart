@@ -10,6 +10,9 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'dart:async';
+import 'stats_screen.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 // my_email: prudnikov.michael@aol.com
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,6 +53,9 @@ class _MainMenuState extends State<MainMenu> with SingleTickerProviderStateMixin
   double _parallaxY = 0;
   StreamSubscription? _accelSubscription;
 
+
+  
+
   @override
   void initState() {
     super.initState();
@@ -79,6 +85,8 @@ class _MainMenuState extends State<MainMenu> with SingleTickerProviderStateMixin
   });
 
   }
+
+
 
   @override
   void dispose() {
@@ -510,6 +518,14 @@ Widget _buildVolumeSlider({required double value, required Function(double) onCh
         Positioned(top: 50, left: 25, child: IconButton(icon: const Icon(Icons.help_outline, color: Color(0xFFFFD54F), size: 40), onPressed: _openRules)),
         Positioned(top: 50, right: 25, child: IconButton(icon: const Icon(Icons.settings, color: Color(0xFFFFD54F), size: 40), onPressed: _openSettings)),
         Positioned(bottom: 20, left: 0, right: 0, child: Center(child: Text("version: ${GameSettings.appVersion}", style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12)))),
+        Positioned(
+  top: 50,
+  right: 85, // Сдвигаем левее от шестеренки
+  child: IconButton(
+    icon: const Icon(Icons.bar_chart, color: Color(0xFFFFD54F), size: 40),
+    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const StatsScreen())),
+  ),
+),
       ],
     ),
   );
@@ -536,7 +552,7 @@ class MancalaGame extends StatefulWidget {
   @override
   State<MancalaGame> createState() => _MancalaGameState();
 }
-
+// Основа
 class _MancalaGameState extends State<MancalaGame> with TickerProviderStateMixin {
   List<int> board = List.filled(14, 4);
   bool isP1Turn = true;
@@ -546,7 +562,31 @@ class _MancalaGameState extends State<MancalaGame> with TickerProviderStateMixin
   bool isAiThinking = false;
   int? aiHighlightIndex; // Индекс лунки, которую "рассматривает" ИИ
   int? aiSelectedPit; // Новая переменная для акцента на стартовой лунке
+  DateTime? startTime;
 
+void _saveFinalStats() async {
+  if (startTime == null) return;
+  final prefs = await SharedPreferences.getInstance();
+  final duration = DateTime.now().difference(startTime!);
+  
+  final durationStr = "${duration.inMinutes.toString().padLeft(2, '0')}:${(duration.inSeconds % 60).toString().padLeft(2, '0')}";
+  final now = DateTime.now();
+  final dateStr = "${now.day.toString().padLeft(2, '0')}.${now.month.toString().padLeft(2, '0')}.${now.year}";
+
+  final record = GameRecord(
+    date: dateStr,
+    mode: widget.mode == GameMode.ai ? "VS CPU" : "PVP",
+    score: "${board[6]} : ${board[13]}",
+    duration: durationStr,
+    difficulty: widget.mode == GameMode.ai 
+        ? GameSettings.difficulty.name.toUpperCase() 
+        : "", // Сохраняем сложность только для игры с ИИ
+  );
+
+  List<String> history = prefs.getStringList('game_history') ?? [];
+  history.insert(0, json.encode(record.toJson()));
+  await prefs.setStringList('game_history', history);
+}
 
 void _confirmExit() {
     var txt = GameSettings.labels[GameSettings.lang] ?? GameSettings.labels[Language.en]!;
@@ -582,6 +622,7 @@ void _confirmExit() {
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
+    startTime = DateTime.now();
   }
 
   @override
@@ -597,6 +638,12 @@ void _confirmExit() {
     return p1Empty || p2Empty;
   }
 void _showGameOverDialog() {
+  void saveGame(GameRecord newRecord) async {
+  final prefs = await SharedPreferences.getInstance();
+  List<String> history = prefs.getStringList('game_history') ?? [];
+  history.insert(0, json.encode(newRecord.toJson())); // Добавляем в начало
+  await prefs.setStringList('game_history', history);
+}
     var txt = GameSettings.labels[GameSettings.lang] ?? GameSettings.labels[Language.en]!;
     
     // Берем только то, что уже лежит в Калахах
@@ -965,76 +1012,90 @@ Widget _buildPit(int i) {
     );
   }
 
-  void _move(int start) async {
-    if (board[start] == 0 || animating) return;
-    setState(() => animating = true);
+void _move(int start) async {
+  if (board[start] == 0 || animating) return;
+  setState(() => animating = true);
+  
+  int stones = board[start]; 
+  board[start] = 0;
+  int curr = start;
+  
+  // 1. РАСКЛАДЫВАЕМ КАМНИ
+  while (stones > 0) {
+    curr = (curr + 1) % 14;
+    // Пропуск чужого Калаха
+    if (start < 6 && curr == 13) curr = 0;
+    if (start > 6 && curr == 6) curr = 7;
     
-    int stones = board[start]; 
-    board[start] = 0;
-    int curr = start;
+    await Future.delayed(const Duration(milliseconds: 300));
     
-    while (stones > 0) {
-      curr = (curr + 1) % 14;
-      if (start < 6 && curr == 13) curr = 0;
-      if (start > 6 && curr == 6) curr = 7;
-      
-      //AudioManager().playSfx(AudioManager.stoneDrop); 
-      await Future.delayed(Duration(milliseconds: 300));
-      
-      HapticFeedback.lightImpact();
-      _stoneAnimController.forward(from: 0);
-      
-      setState(() { 
-        board[curr]++; 
-        lastDrop = curr; 
-        stones--; 
-      });
-      
-      await Future.delayed(const Duration(milliseconds: 180));
-    }
-       
-    // ЛОГИКА ЗАХВАТА:
-    // 1. Последний камень упал в лунку игрока (0-5 для P1, 7-12 для P2)
-    // 2. В этой лунке до этого было 0 камней (теперь стал 1)
-    // 3. В противоположной лунке есть камни
-    if (curr != 6 && curr != 13 && board[curr] == 1) {
-      bool p1Owns = start < 6 && curr < 6;
-      bool p2Owns = start > 6 && curr > 6 && curr < 13;
+    HapticFeedback.lightImpact();
+    _stoneAnimController.forward(from: 0);
+    
+    setState(() { 
+      board[curr]++; 
+      lastDrop = curr; 
+      stones--; 
+    });
+  }
+  
+  // Ждем завершения последней анимации падения
+  await Future.delayed(const Duration(milliseconds: 300));
 
-      if (p1Owns || p2Owns) {
-        int opposite = 12 - curr;
-        if (board[opposite] > 0) {
-          // Забираем всё в Калаху текущего игрока
+  // 2. ЛОГИКА ЗАХВАТА
+  if (curr != 6 && curr != 13 && board[curr] == 1) {
+    bool p1Owns = start < 6 && curr < 6;
+    bool p2Owns = start > 6 && curr > 6 && curr < 13;
+
+    if (p1Owns || p2Owns) {
+      int opposite = 12 - curr;
+      if (board[opposite] > 0) {
+        setState(() {
           int kalah = p1Owns ? 6 : 13;
           board[kalah] += board[opposite] + board[curr];
           board[opposite] = 0;
           board[curr] = 0;
-          HapticFeedback.mediumImpact(); // Сильный виброотклик при захвате
-        }
+        });
+        HapticFeedback.mediumImpact();
       }
-    }
-
-    
-    
-    // Проверка окончания игры
-    if (_checkGameOver()) {
-      setState(() => animating = false);
-      await Future.delayed(const Duration(milliseconds: 500));
-      _showGameOverDialog();
-      return;
-    }
-    
-    if (!((start < 6 && curr == 6) || (start > 6 && curr == 13))) {
-      isP1Turn = !isP1Turn;
-    }
-    
-    setState(() => animating = false);
-    
-    if (!isP1Turn && widget.mode == GameMode.ai) {
-      _aiMove();
     }
   }
 
+  // 3. ПРОВЕРКА ОКОНЧАНИЯ ИГРЫ
+  if (_checkGameOver()) {
+    // Собираем оставшиеся камни в Калахи
+    setState(() {
+      for (int i = 0; i < 6; i++) {
+        board[6] += board[i];
+        board[i] = 0;
+      }
+      for (int i = 7; i < 13; i++) {
+        board[13] += board[i];
+        board[i] = 0;
+      }
+      animating = false;
+    });
+
+    // СОХРАНЯЕМ СТАТИСТИКУ (с учетом уровня сложности)
+    _saveFinalStats(); 
+
+    await Future.delayed(const Duration(milliseconds: 500));
+    _showGameOverDialog();
+    return;
+  }
+  
+  // 4. ПЕРЕДАЧА ХОДА (если не попали в свой Калах)
+  if (!((start < 6 && curr == 6) || (start > 6 && curr == 13))) {
+    isP1Turn = !isP1Turn;
+  }
+  
+  setState(() => animating = false);
+  
+  // Если ход ИИ
+  if (!isP1Turn && widget.mode == GameMode.ai) {
+    _aiMove();
+  }
+}
 
 // Основная функция хода ИИ
 void _aiMove() async {
@@ -1308,6 +1369,8 @@ int _minimax(List<int> currentBoard, int depth, bool isMaximizing, int alpha, in
 
   bool _isTerminal(List<int> b) {
     return b.sublist(0, 6).every((v) => v == 0) || b.sublist(7, 13).every((v) => v == 0);
+
+    
   }
 }
 
