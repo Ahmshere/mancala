@@ -466,7 +466,7 @@ Widget _buildVolumeSlider({required double value, required Function(double) onCh
             // Тень пульсирует и меняет оттенок от черного к медному
             Shadow(
               color: Color.lerp(Colors.black, Colors.deepOrange, _glowAnimation.value)!.withOpacity(0.8),
-              blurRadius: 12 + (8 * _glowAnimation.value),
+              blurRadius: 12 + (10 * _glowAnimation.value),
               offset: Offset(0, 4 + 2 * _glowAnimation.value),
             ),
             // Легкий внутренний блик
@@ -545,6 +545,7 @@ class _MancalaGameState extends State<MancalaGame> with TickerProviderStateMixin
   late AnimationController _stoneAnimController;
   bool isAiThinking = false;
   int? aiHighlightIndex; // Индекс лунки, которую "рассматривает" ИИ
+  int? aiSelectedPit; // Новая переменная для акцента на стартовой лунке
 
 
 void _confirmExit() {
@@ -887,7 +888,9 @@ void _openRules() {
     );
   }
 Widget _buildPit(int i) {
-  // УДАЛИЛИ: bool isHighlightedByAi = aiHighlightIndex == i;
+  // Проверяем, выбрал ли ИИ эту лунку для хода прямо сейчас
+  bool isTarget = aiSelectedPit == i;
+
   bool active = (isP1Turn && i < 6 && board[i] > 0) || 
                 (!isP1Turn && widget.mode == GameMode.pvp && i > 6 && i < 13 && board[i] > 0);
   
@@ -895,13 +898,15 @@ Widget _buildPit(int i) {
     onTap: () => active && !animating && !isAiThinking ? _move(i) : null,
     child: AnimatedContainer(
       duration: const Duration(milliseconds: 150),
-      width: 90, height: 90, margin: const EdgeInsets.all(10),
+      width: 80, height: 80, margin: const EdgeInsets.all(5), // Сделали компактнее
       decoration: BoxDecoration(
-        color: (lastDrop == i ? Colors.white10 : Colors.black38), 
+        // Если ИИ выбрал эту лунку, подсвечиваем её фон белым
+        color: isTarget ? Colors.white24 : (lastDrop == i ? Colors.white10 : Colors.black38), 
         shape: BoxShape.circle, 
         border: Border.all(
-          color: active ? Colors.amber : (lastDrop == i ? Colors.amberAccent : Colors.black45), 
-          width: active ? 4 : 3
+          // Если ИИ выбрал лунку, делаем жирную белую рамку
+          color: isTarget ? Colors.white : (active ? Colors.amber : (lastDrop == i ? Colors.amberAccent : Colors.black45)), 
+          width: isTarget ? 5 : (active ? 4 : 3),
         ),
       ),
       child: Center(
@@ -910,10 +915,29 @@ Widget _buildPit(int i) {
           children: [
             _buildStones(board[i], false),
             if (GameSettings.visualMode != VisualMode.stonesOnly)
-              Text('${board[i]}', style: GoogleFonts.cinzel(
-                textStyle: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFFFFD54F),
-                shadows: [Shadow(color: Colors.black, blurRadius: 4)])
-              )), 
+              // Анимированное увеличение цифры
+              AnimatedScale(
+                scale: isTarget ? 1.6 : 1.0, // Увеличиваем в 1.6 раза
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.elasticOut, // Эффект пружинки
+                child: Text(
+                  '${board[i]}', 
+                  style: GoogleFonts.cinzel(
+                    textStyle: TextStyle( // УБРАЛИ const
+                      fontSize: 22, 
+                      fontWeight: FontWeight.w900, 
+                      // Если ИИ выбрал - цифра белая, иначе золотая
+                      color: isTarget ? Colors.white : const Color(0xFFFFD54F),
+                      shadows: [
+                        Shadow(
+                          color: isTarget ? Colors.white : Colors.black, 
+                          blurRadius: isTarget ? 15 : 4
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+              ), 
           ],
         ),
       ),
@@ -1013,31 +1037,32 @@ Widget _buildPit(int i) {
 
 
 // Основная функция хода ИИ
- void _aiMove() async {
+void _aiMove() async {
   if (!mounted || isP1Turn || animating) return;
-// ВКЛЮЧАЕМ анимацию
+
+  // 1. ВКЛЮЧАЕМ анимацию "ИИ думает" (надпись сверху начинает мигать)
   setState(() {
     isAiThinking = true; 
+    aiSelectedPit = null; // Сбрасываем старый выбор на всякий случай
   });
-  //_runAiThinkingAnimation(); // Запуск визуального перебора
-  // Имитация раздумий (чтобы анимация была видна, даже если ИИ ответил мгновенно)
-  await Future.delayed(const Duration(milliseconds: 500));
-  int bestMove = -1;
-  int bestValue = -20000;
-  
-  // Выбираем глубину в зависимости от сложности
+
+  // Глубина поиска
   int maxDepth;
   switch (GameSettings.difficulty) {
     case Difficulty.easy: maxDepth = 1; break;
-    case Difficulty.medium: maxDepth = 3; break;
-    case Difficulty.hard: maxDepth = 6; break; // Глубина 9 с Alpha-Beta летает
+    case Difficulty.medium: maxDepth = 2; break;
+    case Difficulty.hard: maxDepth = 4; break;
+    default: maxDepth = 2;
   }
 
-  // Небольшая задержка, чтобы игрок понял, что ИИ "думает"
-  await Future.delayed(const Duration(milliseconds: 600));
+  // Небольшая пауза, пока мигает текст (имитация раздумий)
+  await Future.delayed(const Duration(milliseconds: 1000));
 
+  int bestMove = -1;
+  int bestValue = -20000;
   List<int> currentBoard = List.from(board);
   
+  // Основной цикл поиска лучшего хода
   for (int i = 7; i < 13; i++) {
     if (currentBoard[i] > 0) {
       var result = _simulateMoveDetailed(currentBoard, i);
@@ -1049,26 +1074,36 @@ Widget _buildPit(int i) {
       }
     }
   }
-// ВЫКЛЮЧАЕМ анимацию перед совершением хода
-  if (mounted) {
+
+  if (bestMove != -1 && mounted) {
+    // 2. ИИ ПРИНЯЛ РЕШЕНИЕ:
     setState(() {
-      isAiThinking = false;
+      isAiThinking = false; // Надпись перестает мигать
+      aiSelectedPit = bestMove; // ПОДСВЕЧИВАЕМ СТАРТОВУЮ ЛУНКУ (она увеличится в buildPit)
     });
-  }
-  if (bestMove != -1) {
-    // Ждем, пока анимация физического перемещения камней закончится
-    await Future.delayed(const Duration(milliseconds: 500)); 
-    _move(bestMove);
+
+    // Даем игроку время (800мс) увидеть, какую лунку выбрал ИИ
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    if (!mounted) return;
+
+    // 3. ДЕЛАЕМ ХОД
+    setState(() {
+      aiSelectedPit = null; // Убираем увеличение цифры перед началом движения
+    });
+
+    _move(bestMove); // Рассыпаем камни
+
+    // 4. ФИНАЛ ХОДА:
+    // Ждем достаточно времени, чтобы все камни упали (примерно 2 сек)
+    await Future.delayed(const Duration(milliseconds: 2000)); 
     
-    // Ждем еще немного после завершения всех падений камней
-    await Future.delayed(const Duration(seconds: 2)); 
     if (mounted) {
       setState(() {
-        lastDrop = -1; // ВОТ ТУТ МЫ УБИРАЕМ ЖЕЛТЫЙ КРУГ
+        lastDrop = -1; // УБИРАЕМ ЖЕЛТЫЙ КРУГ (подсветку последней упавшей лунки)
       });
     }
   }
-}
 }
 
 // сложность ии
@@ -1274,7 +1309,7 @@ int _minimax(List<int> currentBoard, int depth, bool isMaximizing, int alpha, in
   bool _isTerminal(List<int> b) {
     return b.sublist(0, 6).every((v) => v == 0) || b.sublist(7, 13).every((v) => v == 0);
   }
-
+}
 
  /* void _aiMove() async {
     await Future.delayed(const Duration(milliseconds: 800));
