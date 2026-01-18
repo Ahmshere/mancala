@@ -987,6 +987,12 @@ Widget build(BuildContext context) {
       ),
     );
   }
+  /*
+  В методе _buildPit(int i):
+    Размер лунки: width: 65, height: 65 (в контейнере внутри метода).
+    Размер числа камней: fontSize: 18 (в Text(board[i].toString())).
+    Радиус скругления: borderRadius: BorderRadius.circular(35)
+  */
 Widget _buildPit(int i) {
   // Проверяем, выбрал ли ИИ эту лунку для хода прямо сейчас
   bool isTarget = aiSelectedPit == i;
@@ -999,7 +1005,7 @@ Widget _buildPit(int i) {
     onTap: () => active && !animating && !isAiThinking ? _move(i) : null,
     child: AnimatedContainer(
       duration: const Duration(milliseconds: 150),
-      width: 80, height: 80, margin: const EdgeInsets.all(5), // Сделали компактнее
+      width: 90, height: 90, margin: const EdgeInsets.all(5), // Сделали компактнее
       decoration: BoxDecoration(
         // Если ИИ выбрал эту лунку, подсвечиваем её фон белым
         color: isTarget ? Colors.white24 : (lastDrop == i ? Colors.white10 : Colors.black38), 
@@ -1019,7 +1025,7 @@ Widget _buildPit(int i) {
               // Анимированное увеличение цифры
               AnimatedScale(
                 scale: isTarget ? 1.8 : 1.0, // Увеличиваем в 1.6 раза
-                duration: const Duration(milliseconds: 500),
+                duration: const Duration(milliseconds: 700),
                 curve: Curves.elasticOut, // Эффект пружинки
                 child: Text(
                   '${board[i]}', 
@@ -1178,7 +1184,7 @@ void _aiMove() async {
   switch (GameSettings.difficulty) {
     case Difficulty.easy: maxDepth = 1; break;
     case Difficulty.medium: maxDepth = 3; break;
-    case Difficulty.hard: maxDepth = 5; break;
+    case Difficulty.hard: maxDepth = 7; break;
     default: maxDepth = 2;
   }
 
@@ -1323,7 +1329,7 @@ int _evaluatePosition(List<int> b) {
     randomness = Random().nextInt(40) - 2; // Ошибка до 20 очков
   }
   // 1. Разница в Калахах (основной вес)
-  int score = (b[13] - b[6]) * 10 +randomness; /* Чтобы он стал «глупее», в твоем методе _evaluatePosition просто поменяй множитель в первой строке: int score = (b[13] - b[6]) * 10; (вместо 100). Тогда он будет меньше дорожить камнями в Калахе.*/
+  int score = (b[13] - b[6]) * 20 +randomness; /* Чтобы он стал «глупее», в твоем методе _evaluatePosition просто поменяй множитель в первой строке: int score = (b[13] - b[6]) * 10; (вместо 100). Тогда он будет меньше дорожить камнями в Калахе.*/
 
   // 2. БОНУС за возможность сделать доп. ход прямо сейчас
   // ИИ должен "обожать" цепочки ходов
