@@ -600,6 +600,32 @@ void _animateCapture(int fromIndex, int toIndex) {
     captureAnimations.add(flying);
   });
 }
+// save statistic
+// Изменяем название и добавляем аргументы p1 и p2
+void _saveFinalStatsManual(int finalP1, int finalP2) async {
+  if (startTime == null) return;
+  final prefs = await SharedPreferences.getInstance();
+  final duration = DateTime.now().difference(startTime!);
+  
+  final durationStr = "${duration.inMinutes.toString().padLeft(2, '0')}:${(duration.inSeconds % 60).toString().padLeft(2, '0')}";
+  final now = DateTime.now();
+  final dateStr = "${now.day.toString().padLeft(2, '0')}.${now.month.toString().padLeft(2, '0')}.${now.year}";
+
+  final record = GameRecord(
+    date: dateStr,
+    mode: widget.mode == GameMode.ai ? "VS CPU" : "PVP",
+    score: "$finalP1 : $finalP2", // Используем ПЕРЕДАННЫЕ значения
+    duration: durationStr,
+    difficulty: widget.mode == GameMode.ai 
+        ? GameSettings.difficulty.name.toUpperCase() 
+        : "",
+  );
+
+  List<String> history = prefs.getStringList('game_history') ?? [];
+  history.insert(0, json.encode(record.toJson()));
+  await prefs.setStringList('game_history', history);
+}
+
 
 void _saveFinalStats() async {
   if (startTime == null) return;
@@ -686,7 +712,8 @@ void _showGameOverDialog() {
     // Берем только то, что уже лежит в Калахах
     int p1Score = board[6];
     int p2Score = board[13];
-    
+    _saveFinalStatsManual(p1Score, p2Score);
+   // _saveFinalStatsManual(p1Score, p2Score);
     // Очищаем лунки визуально для красоты, но НЕ прибавляем их к счету
     for (int i = 0; i < 14; i++) {
       if (i != 6 && i != 13) board[i] = 0;
@@ -1137,7 +1164,7 @@ if (curr != 6 && curr != 13 && board[curr] == 1) {
   if (_checkGameOver()) {
     // Собираем оставшиеся камни в Калахи
     setState(() {
-      for (int i = 0; i < 6; i++) {
+     /* for (int i = 0; i < 6; i++) {
         board[6] += board[i];
         board[i] = 0;
       }
@@ -1145,11 +1172,12 @@ if (curr != 6 && curr != 13 && board[curr] == 1) {
         board[13] += board[i];
         board[i] = 0;
       }
+      */
       animating = false;
     });
 
     // СОХРАНЯЕМ СТАТИСТИКУ (с учетом уровня сложности)
-    _saveFinalStats(); 
+   // _saveFinalStats(); 
 
     await Future.delayed(const Duration(milliseconds: 500));
     _showGameOverDialog();
