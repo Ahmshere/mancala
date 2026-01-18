@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
 
 /// Анимированный камень для игры Mancala
 /* ==========================================================================
@@ -37,7 +38,7 @@ class _AnimatedStoneState extends State<AnimatedStone>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 500),
       vsync: this,
     );
 // Эффект "упругого" появления (Scale): камень увеличивается с 0 до 1 с отскоком
@@ -287,7 +288,7 @@ class _StoneConfettiState extends State<StoneConfetti> with SingleTickerProvider
       vsync: this, 
       duration: const Duration(seconds: 4)
     )..repeat();
-  }
+  } 
 
   @override
   void dispose() {
@@ -367,7 +368,62 @@ class _Particle {
     Colors.purpleAccent,
   ][Random().nextInt(6)];
 }
+class FlyingStone extends StatefulWidget {
+  final Offset start;
+  final Offset end;
+  final VoidCallback onComplete;
 
+  const FlyingStone({super.key, required this.start, required this.end, required this.onComplete});
+
+  @override
+  State<FlyingStone> createState() => _FlyingStoneState();
+}
+
+class _FlyingStoneState extends State<FlyingStone> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(duration: const Duration(milliseconds: 800), vsync: this);
+    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic);
+    
+    _controller.forward().then((_) => widget.onComplete());
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        double t = _animation.value;
+        // Вычисляем траекторию дуги (парабола)
+        // x — линейно, y — с выгибом вверх
+        double dx = ui.lerpDouble(widget.start.dx, widget.end.dx, t)!;
+        double dy = ui.lerpDouble(widget.start.dy, widget.end.dy, t)! - (sin(pi * t) * 150);
+        return Positioned(
+          left: dx,
+          top: dy,
+          child: Container(
+            width: 12, height: 12,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.amberAccent,
+              boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 4)],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
 /* Вспомогательный класс для описания свойств каждой частицы конфетти */
 
 /*

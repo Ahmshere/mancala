@@ -394,10 +394,10 @@ Widget _buildVolumeSlider({required double value, required Function(double) onCh
         AnimatedPositioned(
           duration: const Duration(milliseconds: 100),
           // Смещаем фон чуть-чуть в зависимости от наклона
-          left: -20 + _parallaxX,
-          top: -20 - _parallaxY,
-          right: -20 - _parallaxX,
-          bottom: -20 + _parallaxY,
+          left: -15 + _parallaxX,
+          top: -15 - _parallaxY,
+          right: -15 - _parallaxX,
+          bottom: -15 + _parallaxY,
           child: Image.asset(
             'assets/images/background.png',
             fit: BoxFit.cover,
@@ -563,6 +563,43 @@ class _MancalaGameState extends State<MancalaGame> with TickerProviderStateMixin
   int? aiHighlightIndex; // Индекс лунки, которую "рассматривает" ИИ
   int? aiSelectedPit; // Новая переменная для акцента на стартовой лунке
   DateTime? startTime;
+  
+  final List<GlobalKey> pitKeys = List.generate(14, (index) => GlobalKey());
+List<Widget> captureAnimations = []; // Здесь будут храниться летящие камни
+ 
+ //метод для вычисления экранных координат и запуска FlyingStone
+void _animateCapture(int fromIndex, int toIndex) {
+  if (pitKeys[fromIndex].currentContext == null || pitKeys[toIndex].currentContext == null) {
+    print("ОШИБКА: Лунка $fromIndex или $toIndex не видна на экране!");
+    return;
+  }
+
+  final RenderBox boxFrom = pitKeys[fromIndex].currentContext!.findRenderObject() as RenderBox;
+  final RenderBox boxTo = pitKeys[toIndex].currentContext!.findRenderObject() as RenderBox;
+
+  final Offset startPos = boxFrom.localToGlobal(Offset(boxFrom.size.width / 2, boxFrom.size.height / 2));
+  final Offset endPos = boxTo.localToGlobal(Offset(boxTo.size.width / 2, boxTo.size.height / 2));
+
+  print("СТАРТ ПОЛЕТА: из $fromIndex в $toIndex ($startPos -> $endPos)");
+
+  late Widget flying;
+  flying = FlyingStone(
+    start: startPos,
+    end: endPos,
+    onComplete: () {
+      print("ПОЛЕТ ЗАВЕРШЕН");
+      if (mounted) {
+        setState(() {
+          captureAnimations.remove(flying);
+        });
+      }
+    },
+  );
+
+  setState(() {
+    captureAnimations.add(flying);
+  });
+}
 
 void _saveFinalStats() async {
   if (startTime == null) return;
@@ -836,79 +873,95 @@ void _openRules() {
       ),
     );
   }
- @override
-  Widget build(BuildContext context) {
-    var txt = GameSettings.labels[GameSettings.lang] ?? GameSettings.labels[Language.en]!;
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        _confirmExit(); // Вызываем подтверждение выхода
-      },
-      child: Scaffold(
-        body: Container(
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage('assets/images/background.png'),
-              fit: BoxFit.cover,
-              colorFilter: ColorFilter.mode(Colors.black87, BlendMode.darken),
+@override
+Widget build(BuildContext context) {
+  var txt = GameSettings.labels[GameSettings.lang] ?? GameSettings.labels[Language.en]!;
+  
+  return PopScope(
+    canPop: false,
+    onPopInvokedWithResult: (didPop, result) {
+      if (didPop) return;
+      _confirmExit();
+    },
+    child: Scaffold(
+      // Оборачиваем все в Stack, чтобы анимации были ПОВЕРХ доски
+      body: Stack(
+        children: [
+          // СЛОЙ 1: Твой текущий интерфейс игры
+          Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/images/background.png'),
+                fit: BoxFit.cover,
+                colorFilter: ColorFilter.mode(Colors.black87, BlendMode.darken),
+              ),
             ),
-          ),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
-            child: SafeArea(
-              child: Stack( // Используем Stack для наложения кнопки помощи
-                children: [
-                  Column(
-                    children: [
-                      const SizedBox(height: 10),
-                      AnimatedOpacity(
-            opacity: isAiThinking ? 0.5 : 1.0,
-            duration: const Duration(milliseconds: 500),
-            child: Text(
-              isP1Turn ? txt['p1_turn']! : (widget.mode == GameMode.ai ? txt['ai_turn']! : txt['p2_turn']!),
-              style: TextStyle( // УДАЛИЛИ const
-                fontSize: 24, 
-                fontWeight: FontWeight.bold, 
-                color: const Color(0xFFFFD54F),
-                shadows: [
-                  if (isAiThinking)
-                    const Shadow(color: Colors.amberAccent, blurRadius: 20),
-                ]
-              )
-            ),
-            ),
-           Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Center(
-                          child: FittedBox( // Этот виджет сожмет доску, чтобы она влезла
-                            fit: BoxFit.contain, 
-                            child: _buildBoard(),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+              child: SafeArea(
+                child: Stack( // Внутренний Stack для кнопки помощи
+                  children: [
+                    Column(
+                      children: [
+                        const SizedBox(height: 10),
+                        AnimatedOpacity(
+                          opacity: isAiThinking ? 0.5 : 1.0,
+                          duration: const Duration(milliseconds: 500),
+                          child: Text(
+                            isP1Turn ? txt['p1_turn']! : (widget.mode == GameMode.ai ? txt['ai_turn']! : txt['p2_turn']!),
+                            style: GoogleFonts.cinzel( // Можно добавить шрифт здесь
+                              textStyle: TextStyle(
+                                fontSize: 24, 
+                                fontWeight: FontWeight.bold, 
+                                color: const Color(0xFFFFD54F),
+                                shadows: [
+                                  if (isAiThinking)
+                                    const Shadow(color: Colors.amberAccent, blurRadius: 20),
+                                ]
+                              ),
+                            ),
                           ),
                         ),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: Center(
+                              child: FittedBox(
+                                fit: BoxFit.contain, 
+                                child: _buildBoard(),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                    ),
+                    Positioned(
+                      top: 5,
+                      right: 5,
+                      child: IconButton(
+                        icon: const Icon(Icons.help_outline, color: Colors.amber, size: 35),
+                        onPressed: _openRules,
                       ),
                     ),
-                    const SizedBox(height: 10),
                   ],
                 ),
-                  // САМА КНОПКА ИНСТРУКЦИИ
-                  Positioned(
-                    top: 5,
-                    right: 5,
-                    child: IconButton(
-                      icon: const Icon(Icons.help_outline, color: Colors.amber, size: 35),
-                      onPressed: _openRules, // Открывает правила со скроллбаром
-                    ),
-                  ),
-                ],
               ),
             ),
           ),
-        ),
+
+          // СЛОЙ 2: АНИМАЦИИ ПОЛЕТА КАМНЕЙ
+          // Этот список разворачивается поверх всей доски
+          ...captureAnimations,
+
+          // СЛОЙ 3: КОНФЕТТИ (Появляется только в конце)
+          // Мы его уже прописывали в _showGameOverDialog, но можно продублировать и здесь,
+          // если хочешь управлять им через переменную состояния.
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildBoard() {
     return Container(
@@ -942,6 +995,7 @@ Widget _buildPit(int i) {
                 (!isP1Turn && widget.mode == GameMode.pvp && i > 6 && i < 13 && board[i] > 0);
   
   return GestureDetector(
+    key: pitKeys[i], 
     onTap: () => active && !animating && !isAiThinking ? _move(i) : null,
     child: AnimatedContainer(
       duration: const Duration(milliseconds: 150),
@@ -964,14 +1018,14 @@ Widget _buildPit(int i) {
             if (GameSettings.visualMode != VisualMode.stonesOnly)
               // Анимированное увеличение цифры
               AnimatedScale(
-                scale: isTarget ? 1.6 : 1.0, // Увеличиваем в 1.6 раза
+                scale: isTarget ? 1.8 : 1.0, // Увеличиваем в 1.6 раза
                 duration: const Duration(milliseconds: 500),
                 curve: Curves.elasticOut, // Эффект пружинки
                 child: Text(
                   '${board[i]}', 
                   style: GoogleFonts.cinzel(
                     textStyle: TextStyle( // УБРАЛИ const
-                      fontSize: 22, 
+                      fontSize: 24, 
                       fontWeight: FontWeight.w900, 
                       // Если ИИ выбрал - цифра белая, иначе золотая
                       color: isTarget ? Colors.white : const Color(0xFFFFD54F),
@@ -993,6 +1047,7 @@ Widget _buildPit(int i) {
 }
   Widget _buildKalah(int i, Color color) {
     return Container(
+      key: pitKeys[i],
       width: 100, height: 240, margin: const EdgeInsets.symmetric(horizontal: 15),
       decoration: BoxDecoration(
         color: Colors.black45, 
@@ -1043,23 +1098,34 @@ void _move(int start) async {
   await Future.delayed(const Duration(milliseconds: 300));
 
   // 2. ЛОГИКА ЗАХВАТА
-  if (curr != 6 && curr != 13 && board[curr] == 1) {
-    bool p1Owns = start < 6 && curr < 6;
-    bool p2Owns = start > 6 && curr > 6 && curr < 13;
+ // ЛОГИКА ЗАХВАТА
+if (curr != 6 && curr != 13 && board[curr] == 1) {
+  bool p1Owns = start < 6 && curr < 6;
+  bool p2Owns = start > 6 && curr > 6 && curr < 13;
 
-    if (p1Owns || p2Owns) {
-      int opposite = 12 - curr;
-      if (board[opposite] > 0) {
-        setState(() {
-          int kalah = p1Owns ? 6 : 13;
-          board[kalah] += board[opposite] + board[curr];
-          board[opposite] = 0;
-          board[curr] = 0;
-        });
-        HapticFeedback.mediumImpact();
-      }
+  if (p1Owns || p2Owns) {
+    int opposite = 12 - curr;
+    if (board[opposite] > 0) {
+      int kalah = p1Owns ? 6 : 13;
+
+      // 1. Сначала запускаем визуальный полет
+      _animateCapture(opposite, kalah); // Камни врага
+      _animateCapture(curr, kalah);     // Ваш последний камень
+      
+      HapticFeedback.mediumImpact();
+
+      // 2. ЖДЕМ завершения анимации (в FlyingStone стоит duration 800ms)
+      await Future.delayed(const Duration(milliseconds: 850));
+
+      // 3. ТОЛЬКО ТЕПЕРЬ обновляем цифры на доске
+      setState(() {
+        board[kalah] += board[opposite] + board[curr];
+        board[opposite] = 0;
+        board[curr] = 0;
+      });
     }
   }
+}
 
   // 3. ПРОВЕРКА ОКОНЧАНИЯ ИГРЫ
   if (_checkGameOver()) {
