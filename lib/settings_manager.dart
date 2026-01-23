@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
 enum Language { ru, en, de }
-enum VisualMode { numbersOnly, stonesAndNumbers , stonesOnly}
+
+enum VisualMode { numbersOnly, stonesAndNumbers, stonesOnly }
+
 enum Difficulty { easy, medium, hard }
+
 enum GameMode { pvp, ai }
 
 class GameSettings {
@@ -10,12 +13,12 @@ class GameSettings {
   static Difficulty difficulty = Difficulty.medium;
   static VisualMode visualMode = VisualMode.stonesAndNumbers;
   static const String appVersion = "1.0.0";
- 
+
   static bool isSoundOn = true;
   static bool isMusicOn = true;
   static double musicVolume = 0.5;
   static double sfxVolume = 0.5;
-  
+
   // Не забудь добавить переводы для новых пунктов меню в Label
 
   static const Map<Language, Map<String, String>> labels = {
@@ -41,7 +44,8 @@ class GameSettings {
       'p2': 'Player 2',
       'play_again': 'Play Again',
       'support_title': 'Support the Creator',
-      'support_text': 'Im a writer, musician, and traveler. This game features my original code and hand-recorded soundscapes. From Meanwhile, in My Life... stories to The Grand Tour Alone project — your support fuels my independent creative journey.',
+      'support_text':
+          'Im a writer, musician, and traveler. This game features my original code and hand-recorded soundscapes. From Meanwhile, in My Life... stories to The Grand Tour Alone project — your support fuels my independent creative journey.',
       'rules_text': '''
 🎯 OBJECTIVE:
 
@@ -74,12 +78,12 @@ The player with more stones wins!
 💡 STRATEGY TIP:
 
 Try to make your last stone land in your Kalah to earn an extra turn!
-'''
-,'music': 'Music',
-    'sound': 'Sound Effects',
-    'volume': 'Volume',
-    'exit_confirm_title': 'Leave Game?',
-    'exit_confirm_desc': 'Are you sure you want to exit?',
+''',
+      'music': 'Music',
+      'sound': 'Sound Effects',
+      'volume': 'Volume',
+      'exit_confirm_title': 'Leave Game?',
+      'exit_confirm_desc': 'Are you sure you want to exit?',
     },
     Language.ru: {
       'title': 'МАНКАЛА',
@@ -103,10 +107,11 @@ Try to make your last stone land in your Kalah to earn an extra turn!
       'p2': 'Игрок 2',
       'play_again': 'Играть снова',
       'support_title': 'Поддержать автора',
-      'support_text': 'Я писатель, музыкант и путешественник. В этой игре я соединил код и авторские звуки, записанные вручную. От историй «Meanwhile, in My Life...» до проекта «The Grand Tour Alone» — ваша поддержка помогает мне создавать это искусство независимо.',
+      'support_text':
+          'Я писатель, музыкант и путешественник. В этой игре я соединил код и авторские звуки, записанные вручную. От историй «Meanwhile, in My Life...» до проекта «The Grand Tour Alone» — ваша поддержка помогает мне создавать это искусство независимо.',
       'rules_text': '''
 📋 ЦЕЛЬ:
-Собрать камней в свою Калаху (большую лунку)  больше, чем противник.
+Собрать камней в свою Калаху (большую лунку)  больше, чем противник.(Правая калаха принадлежит игроку 1. (Левая калаха принадлежит игроку 2 или ИИ)
 
 🎮 НАСТРОЙКА ИГРЫ:
 • Доска имеет 12 маленьких лунок (по 6 на игрока) и 2 Калахи (большие лунки).
@@ -120,18 +125,19 @@ Try to make your last stone land in your Kalah to earn an extra turn!
 3. При свершении хода камни распределяются во все лунки кроме Калахи (большая лунка) противника.
 4. Если последний камень попал в ВАШУ Калаху (большую лунку) → ходите снова!
 5. Если последний камень попал в ВАШУ пустую лунку, то этот камень и все камни из противоположной лунки перемещаются в вашу Калаху (большую лунку).
+6. Если последний камень попал в ВАШУ пустую лунку, но в противоположной лунке нет камней, то это обычный ход.
 
 🏁 КОНЕЦ ИГРЫ:
-Когда одна сторона игрока пуста гра завершается. Выигрывает тот, у кого больше!
+Когда одна сторона игрока пуста игра завершается. Выигрывает тот, у кого больше камней!
 
 💡 СОВЕТ ПО СТРАТЕГИИ:
-Старайтесь, чтобы последний камень попал в вашу Калаху для дополнительного хода!
-''', 
-'music': 'Музыка',
-    'sound': 'Звуки',
-    'volume': 'Громкость',
-    'exit_confirm_title': 'Выйти из игры?',
-    'exit_confirm_desc': 'Вы уверены? Прогресс будет потерян.',
+Старайтесь, чтобы последний камень попал в вашу Калаху для дополнительного хода.
+''',
+      'music': 'Музыка',
+      'sound': 'Звуки',
+      'volume': 'Громкость',
+      'exit_confirm_title': 'Выйти из игры?',
+      'exit_confirm_desc': 'Вы уверены? Прогресс будет потерян.',
     },
     Language.de: {
       'title': 'MANCALA',
@@ -155,7 +161,8 @@ Try to make your last stone land in your Kalah to earn an extra turn!
       'p2': 'Spieler 2',
       'play_again': 'Nochmal spielen',
       'support_title': 'Unterstütze den Entwickler',
-      'support_text': 'ch bin Autor, Musiker und Reisender. Dieses Spiel kombiniert meinen Code mit handaufgenommenen Soundscapes. Von Meanwhile, in My Life...-Geschichten bis zum The Grand Tour Alone -Projekt — deine Unterstützung fördert meine unabhängige Arbeit.',
+      'support_text':
+          'ch bin Autor, Musiker und Reisender. Dieses Spiel kombiniert meinen Code mit handaufgenommenen Soundscapes. Von Meanwhile, in My Life...-Geschichten bis zum The Grand Tour Alone -Projekt — deine Unterstützung fördert meine unabhängige Arbeit.',
       'rules_text': '''
 🇩🇪 Deutsch
 🎯 ZIEL:
@@ -189,11 +196,12 @@ Der Spieler mit den meisten Steinen gewinnt!
 💡 STRATEGIETIPP:
 
 Versuche, den letzten Stein in deine Kalah zu legen, um einen zusätzlichen Zug zu erhalten!
-''','music': 'Musik',
-    'sound': 'Töne',
-    'volume': 'Lautstärke',
-    'exit_confirm_title': 'Spiel verlassen?',
-    'exit_confirm_desc': 'Bist du sicher? Fortschritt geht verloren.',
+''',
+      'music': 'Musik',
+      'sound': 'Töne',
+      'volume': 'Lautstärke',
+      'exit_confirm_title': 'Spiel verlassen?',
+      'exit_confirm_desc': 'Bist du sicher? Fortschritt geht verloren.',
     },
   };
 }
