@@ -575,6 +575,9 @@ class _MancalaGameState extends State<MancalaGame> with TickerProviderStateMixin
   int? aiHighlightIndex; // Индекс лунки, которую "рассматривает" ИИ
   int? aiSelectedPit; // Новая переменная для акцента на стартовой лунке
   DateTime? startTime;
+  List<int>? _lastBoardState; // Состояние доски до хода
+  bool? _lastTurnState;       // Чей был ход
+  bool _canUndo = false;      // Можно ли сейчас отменить ход
   
   final List<GlobalKey> pitKeys = List.generate(14, (index) => GlobalKey());
 List<Widget> captureAnimations = []; // Здесь будут храниться летящие камни
@@ -984,17 +987,41 @@ Widget build(BuildContext context) {
                       ),
                     ),
                     // кнопка вкл/выкл фон музыки 
-                     Positioned(top: 5, left: 5, child: IconButton(icon: Icon(GameSettings.isMusicOn ? Icons.music_note : Icons.music_off, color: Colors.amber, size: 35, ),
-              onPressed: () { setState(() {
-                  GameSettings.isMusicOn = !GameSettings.isMusicOn;
-	                  if (GameSettings.isMusicOn) {
-        	            AudioManager().playMusic();
-                	  } else {
-	                    AudioManager().stopMusic();
-        	          } });
-		           },
-            ),
+                  // Кнопки управления (Музыка + Отмена хода)
+Positioned(
+  top: 5,
+  left: 5,
+  child: Row(
+    children: [
+      // Твоя кнопка музыки
+      IconButton(
+        icon: Icon(
+          GameSettings.isMusicOn ? Icons.music_note : Icons.music_off,
+          color: Colors.amber,
+          size: 35,
+        ),
+        onPressed: () {
+          setState(() {
+            GameSettings.isMusicOn = !GameSettings.isMusicOn;
+            if (GameSettings.isMusicOn) {
+              AudioManager().playMusic();
+            } else {
+              AudioManager().stopMusic();
+            }
+          });
+        },
+      ),
+      const SizedBox(width: 10), // Небольшой отступ между музыкой и отменой
+      // Кнопка ОТМЕНЫ хода (появляется только когда есть что отменять)
+      if (_canUndo && !animating)
+        IconButton(
+           icon: const Icon(Icons.undo, color: Colors.amber, size: 35),
+           tooltip: 'Undo',
+           onPressed: animating ? null : _undoMove,
           ),
+    ],
+  ),
+),
 
                   ],
                 ),
@@ -1129,6 +1156,11 @@ void _move(int start) async {
   if (board[start] == 0 || animating) return;
   setState(() => animating = true);
   
+  // СОХРАНЯЕМ ДЛЯ ОТМЕНЫ
+_lastBoardState = List.from(board);
+_lastTurnState = isP1Turn;
+_canUndo = true;
+
   int stones = board[start]; 
   board[start] = 0;
   int curr = start;
@@ -1220,6 +1252,20 @@ if (curr != 6 && curr != 13 && board[curr] == 1) {
   if (!isP1Turn && widget.mode == GameMode.ai) {
     _aiMove();
   }
+}
+// отмена хода
+void _undoMove() {
+  if (!_canUndo || _lastBoardState == null) return;
+  if (_lastTurnState != isP1Turn) return;
+
+  setState(() {
+    board = List.from(_lastBoardState!);
+    isP1Turn = _lastTurnState!;
+    _canUndo = false; 
+    captureAnimations.clear(); // Очищаем старые анимации захвата, если они были
+  });
+  
+  HapticFeedback.lightImpact(); // Добавим тактильный отклик
 }
 
 // Основная функция хода ИИ
