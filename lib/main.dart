@@ -536,7 +536,8 @@ Widget _buildVolumeSlider({required double value, required Function(double) onCh
     icon: const Icon(Icons.bar_chart, color: Color(0xFFFFD54F), size: 40),
     onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const StatsScreen())),
   ),
-),
+), 
+
       ],
     ),
   );
@@ -982,6 +983,19 @@ Widget build(BuildContext context) {
                         onPressed: _openRules,
                       ),
                     ),
+                    // кнопка вкл/выкл фон музыки 
+                     Positioned(top: 5, left: 5, child: IconButton(icon: Icon(GameSettings.isMusicOn ? Icons.music_note : Icons.music_off, color: Colors.amber, size: 35, ),
+              onPressed: () { setState(() {
+                  GameSettings.isMusicOn = !GameSettings.isMusicOn;
+	                  if (GameSettings.isMusicOn) {
+        	            AudioManager().playMusic();
+                	  } else {
+	                    AudioManager().stopMusic();
+        	          } });
+		           },
+            ),
+          ),
+
                   ],
                 ),
               ),
