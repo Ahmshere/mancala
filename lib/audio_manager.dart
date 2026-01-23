@@ -27,13 +27,18 @@ class AudioManager {
   }
 
   // Фоновая музыка
-  void playMusic() async {
-    if (GameSettings.isMusicOn && !isMusicPlaying) {
+void playMusic() async {
+  if (GameSettings.isMusicOn && !isMusicPlaying) {
+    try {
       await _musicPlayer.play(AssetSource('audio/$bgMusic'));
       await _musicPlayer.setVolume(GameSettings.musicVolume);
       isMusicPlaying = true;
+      print('✅ the music has started.'); // Для отладки
+    } catch (e) {
+      print('❌ Music playback error: $e');
     }
   }
+}
 
   void stopMusic() {
     _musicPlayer.stop();

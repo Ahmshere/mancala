@@ -14,8 +14,16 @@ import 'stats_screen.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 // my_email: prudnikov.michael@aol.com
-void main() {
+void main() async{
   WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
+     
+  ]);
+    await AudioManager().init();
+  
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.landscapeLeft,
@@ -83,7 +91,10 @@ class _MainMenuState extends State<MainMenu> with SingleTickerProviderStateMixin
       _parallaxY = event.y * 2;
     });
   });
-
+  // фоновая музыка
+    if (GameSettings.isMusicOn) {
+      AudioManager().playMusic();
+     }
   }
 
 
@@ -1212,7 +1223,7 @@ void _aiMove() async {
   switch (GameSettings.difficulty) {
     case Difficulty.easy: maxDepth = 1; break;
     case Difficulty.medium: maxDepth = 3; break;
-    case Difficulty.hard: maxDepth = 7; break;
+    case Difficulty.hard: maxDepth = 8; break;
     default: maxDepth = 2;
   }
 
@@ -1357,7 +1368,7 @@ int _evaluatePosition(List<int> b) {
     randomness = Random().nextInt(40) - 2; // Ошибка до 20 очков
   }
   // 1. Разница в Калахах (основной вес)
-  int score = (b[13] - b[6]) * 20 +randomness; /* Чтобы он стал «глупее», в твоем методе _evaluatePosition просто поменяй множитель в первой строке: int score = (b[13] - b[6]) * 10; (вместо 100). Тогда он будет меньше дорожить камнями в Калахе.*/
+  int score = (b[13] - b[6]) * 30 +randomness; /* Чтобы он стал «глупее», в твоем методе _evaluatePosition просто поменяй множитель в первой строке: int score = (b[13] - b[6]) * 10; (вместо 100). Тогда он будет меньше дорожить камнями в Калахе.*/
 
   // 2. БОНУС за возможность сделать доп. ход прямо сейчас
   // ИИ должен "обожать" цепочки ходов
@@ -1473,24 +1484,3 @@ int _minimax(List<int> currentBoard, int depth, bool isMaximizing, int alpha, in
     
   }
 }
-
- /* void _aiMove() async {
-    await Future.delayed(const Duration(milliseconds: 800));
-    
-    // Проверяем, есть ли ходы
-    bool hasMove = false;
-    for (int i = 7; i < 13; i++) {
-      if (board[i] > 0) {
-        hasMove = true;
-        _move(i);
-        break;
-      }
-    }
-    
-    // Если ходов нет, игра окончена
-    if (!hasMove && !animating) {
-      await Future.delayed(const Duration(milliseconds: 500));
-      _showGameOverDialog();
-    }
-  }
-  */
