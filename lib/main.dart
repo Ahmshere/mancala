@@ -1012,13 +1012,20 @@ Positioned(
         },
       ),
       const SizedBox(width: 10), // Небольшой отступ между музыкой и отменой
+
       // Кнопка ОТМЕНЫ хода (появляется только когда есть что отменять)
-      if (_canUndo && !animating)
+      if (_canUndo && !animating && !isAiThinking)
+  IconButton(
+    icon: const Icon(Icons.undo, color: Colors.amber, size: 35),
+    onPressed: _undoMove,
+  ),
+    /*  if (_canUndo && !animating && !isAiThinking) 
         IconButton(
-           icon: const Icon(Icons.undo, color: Colors.amber, size: 35),
-           tooltip: 'Undo',
-           onPressed: animating ? null : _undoMove,
-          ),
+          icon: const Icon(Icons.undo, color: Colors.amber, size: 35),
+          tooltip: 'Undo',
+          onPressed: _undoMove,
+        ),*/
+   
     ],
   ),
 ),
@@ -1157,10 +1164,15 @@ void _move(int start) async {
   setState(() => animating = true);
   
   // СОХРАНЯЕМ ДЛЯ ОТМЕНЫ
-_lastBoardState = List.from(board);
-_lastTurnState = isP1Turn;
-_canUndo = true;
-
+//_lastBoardState = List.from(board);
+//_lastTurnState = isP1Turn;
+//_canUndo = true;
+// Если это ход игрока, запоминаем состояние ДО начала хода
+ if (widget.mode == GameMode.pvp || isP1Turn) {
+    _lastBoardState = List.from(board);
+    _lastTurnState = isP1Turn;
+    _canUndo = true;
+  }
   int stones = board[start]; 
   board[start] = 0;
   int curr = start;
@@ -1249,19 +1261,48 @@ if (curr != 6 && curr != 13 && board[curr] == 1) {
   setState(() => animating = false);
   
   // Если ход ИИ
-  if (!isP1Turn && widget.mode == GameMode.ai) {
-    _aiMove();
+// Блок в конце метода _move
+if (!isP1Turn && widget.mode == GameMode.ai) {
+  // 1. Сразу блокируем кнопку отмены
+  setState(() => isAiThinking = true); 
+
+  await Future.delayed(const Duration(milliseconds: 800));
+  
+  // ТУТ ВАША ЛОГИКА ИЗ ФАЙЛА:
+  int bestEval = -10000;
+  int aiMove = -1;
+  int depth = GameSettings.difficulty == 'Easy' ? 2 : (GameSettings.difficulty == 'Medium' ? 4 : 6);
+
+  for (int i = 7; i < 13; i++) {
+    if (board[i] == 0) continue;
+    var result = _simulateMoveDetailed(board, i);
+    int eval = _minimax(result.board, depth - 1, result.extraTurn, -10000, 10000);
+    if (eval > bestEval) {
+      bestEval = eval;
+      aiMove = i;
+    }
   }
+
+  // 2. Расчет окончен, снимаем блокировку
+  setState(() => isAiThinking = false); 
+
+  if (aiMove != -1) {
+    _move(aiMove);
+  }
+}
 }
 // отмена хода
 void _undoMove() {
   if (!_canUndo || _lastBoardState == null) return;
-  if (_lastTurnState != isP1Turn) return;
+  
 
   setState(() {
     board = List.from(_lastBoardState!);
     isP1Turn = _lastTurnState!;
+
     _canUndo = false; 
+    animating = false;     // ПРИНУДИТЕЛЬНО останавливаем анимации
+    isAiThinking = false;  // ПРИНУДИТЕЛЬНО останавливаем думы ИИ
     captureAnimations.clear(); // Очищаем старые анимации захвата, если они были
   });
   
