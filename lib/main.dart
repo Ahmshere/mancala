@@ -1175,7 +1175,10 @@ class _MancalaGameState extends State<MancalaGame>
                                     10), // Небольшой отступ между музыкой и отменой
 
                             // Кнопка ОТМЕНЫ хода (появляется только когда есть что отменять)
-                            if (_canUndo && !animating && !isAiThinking)
+                            if (_canUndo &&
+                                !animating &&
+                                !isAiThinking &&
+                                aiSelectedPit == null)
                               IconButton(
                                 icon: const Icon(Icons.undo,
                                     color: Colors.amber, size: 35),
