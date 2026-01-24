@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'settings_manager.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'animations.dart'; // Новый файл для анимаций
+import 'animations.dart';
 import 'audio_manager.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart';
@@ -13,6 +13,7 @@ import 'dart:async';
 import 'stats_screen.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+// import 'space_background.dart';
 
 // my_email: prudnikov.michael@aol.com
 void main() async {
@@ -657,6 +658,8 @@ class MancalaGame extends StatefulWidget {
 class _MancalaGameState extends State<MancalaGame>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   List<int> board = List.filled(14, 4);
+  // late List<Star> _stars;
+  // late AnimationController _starController;
   bool isP1Turn = true;
   bool animating = false;
   int? lastDrop;
@@ -797,6 +800,12 @@ class _MancalaGameState extends State<MancalaGame>
   @override
   void initState() {
     super.initState();
+    // _stars = Star.generate(50);
+    /*_starController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 20), // Скорость общего потока
+    )..repeat();
+    */
     WidgetsBinding.instance.addObserver(this);
     board[6] = 0;
     board[13] = 0;
@@ -810,6 +819,7 @@ class _MancalaGameState extends State<MancalaGame>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    // _starController.dispose();
     _stoneAnimController.dispose();
     super.dispose();
   }
@@ -1230,8 +1240,8 @@ class _MancalaGameState extends State<MancalaGame>
     Радиус скругления: borderRadius: BorderRadius.circular(35)
   */
   Widget _buildPit(int i) {
-    // Проверяем, выбрал ли ИИ эту лунку для хода прямо сейчас
-    bool isTarget = aiSelectedPit == i;
+    // 1. ПЕРЕМЕННЫЕ (Важно: используй i, так как это индекс лунки)
+    bool isHighlighted = aiSelectedPit == i; // Подсветка для ИИ
 
     bool active = (isP1Turn && i < 6 && board[i] > 0) ||
         (!isP1Turn &&
@@ -1245,53 +1255,53 @@ class _MancalaGameState extends State<MancalaGame>
       onTap: () => active && !animating && !isAiThinking ? _move(i) : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        width: 90, height: 90,
-        margin: const EdgeInsets.all(5), // Сделали компактнее
+        width: 90,
+        height: 90,
+        margin: const EdgeInsets.all(5),
         decoration: BoxDecoration(
-          // Если ИИ выбрал эту лунку, подсвечиваем её фон белым
-          color: isTarget
+          color: isHighlighted
               ? Colors.white24
               : (lastDrop == i ? Colors.white10 : Colors.black38),
           shape: BoxShape.circle,
           border: Border.all(
-            // Если ИИ выбрал лунку, делаем жирную белую рамку
-            color: isTarget
+            color: isHighlighted
                 ? Colors.white
                 : (active
                     ? Colors.amber
                     : (lastDrop == i ? Colors.amberAccent : Colors.black45)),
-            width: isTarget ? 5 : (active ? 4 : 3),
+            width: isHighlighted ? 5 : (active ? 4 : 3),
           ),
         ),
         child: Center(
           child: Stack(
             alignment: Alignment.center,
             children: [
+              // КАМНИ остаются на фоне
               _buildStones(board[i], false),
+
+              // ЦИФРА с новой плавной анимацией
               if (GameSettings.visualMode != VisualMode.stonesOnly)
-                // Анимированное увеличение цифры
-                AnimatedScale(
-                  scale: isTarget ? 1.8 : 1.0, // Увеличиваем в 1.6 раза
-                  duration: const Duration(milliseconds: 700),
-                  curve: Curves.elasticOut, // Эффект пружинки
-                  child: Text(
-                    '${board[i]}',
-                    style: GoogleFonts.cinzel(
-                      textStyle: TextStyle(
-                        // УБРАЛИ const
-                        fontSize: 24,
-                        fontWeight: FontWeight.w900,
-                        // Если ИИ выбрал - цифра белая, иначе золотая
-                        color:
-                            isTarget ? Colors.white : const Color(0xFFFFD54F),
-                        shadows: [
-                          Shadow(
-                              color: isTarget ? Colors.white : Colors.black,
-                              blurRadius: isTarget ? 15 : 4)
-                        ],
-                      ),
+                AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutBack,
+                  style: GoogleFonts.cinzel(
+                    textStyle: TextStyle(
+                      color: isHighlighted
+                          ? Colors.white
+                          : (i < 6
+                              ? Colors.amber[200]
+                              : Colors.deepOrange[200]),
+                      fontSize: isHighlighted ? 40 : 22,
+                      fontWeight: FontWeight.w900,
+                      shadows: [
+                        Shadow(
+                          color: isHighlighted ? Colors.white : Colors.black,
+                          blurRadius: isHighlighted ? 15 : 4,
+                        )
+                      ],
                     ),
                   ),
+                  child: Text('${board[i]}'),
                 ),
             ],
           ),
@@ -1459,7 +1469,35 @@ class _MancalaGameState extends State<MancalaGame>
       setState(() => isAiThinking = false);
 
       if (aiMove != -1) {
-        _move(aiMove);
+        // _move(aiMove);
+        // Внутри метода _move, в блоке, где ходит ИИ:
+        if (!isP1Turn && widget.mode == GameMode.ai && !animating) {
+          // setState(() => isAiThinking = true);
+
+          // Ждем немного перед началом раздумий
+          // await Future.delayed(const Duration(milliseconds: 600));
+
+          _aiMove();
+/*
+          if (aiMove != -1) {
+            // 1. Включаем подсветку (число станет белым и большим)
+            setState(() {
+              aiSelectedPit = aiMove;
+              isAiThinking = false;
+            });
+
+            // 2. Ждем, пока игрок увидит, какую лунку выбрал ИИ
+            await Future.delayed(const Duration(milliseconds: 800));
+
+            // 3. Сбрасываем подсветку и запускаем движение камней
+            setState(() {
+              aiSelectedPit = null;
+            });
+
+            _move(aiMove);
+             // Рекурсивный вызов для выполнения хода
+          }*/
+        }
       }
     }
   }
@@ -1486,20 +1524,18 @@ class _MancalaGameState extends State<MancalaGame>
   void _aiMove() async {
     if (!mounted || isP1Turn || animating) return;
 
-    // 1. ВКЛЮЧАЕМ анимацию "ИИ думает" (надпись сверху начинает мигать)
     setState(() {
       isAiThinking = true;
-      aiSelectedPit = null; // Сбрасываем старый выбор на всякий случай
+      aiSelectedPit = null;
     });
 
-    // Глубина поиска
     int maxDepth;
     switch (GameSettings.difficulty) {
       case Difficulty.easy:
         maxDepth = 1;
         break;
       case Difficulty.medium:
-        maxDepth = 3;
+        maxDepth = 4;
         break;
       case Difficulty.hard:
         maxDepth = 8;
@@ -1508,14 +1544,13 @@ class _MancalaGameState extends State<MancalaGame>
         maxDepth = 2;
     }
 
-    // Небольшая пауза, пока мигает текст (имитация раздумий)
+    // Имитация раздумий (пока мигает текст сверху)
     await Future.delayed(const Duration(milliseconds: 1000));
 
     int bestMove = -1;
     int bestValue = -20000;
     List<int> currentBoard = List.from(board);
 
-    // Основной цикл поиска лучшего хода
     for (int i = 7; i < 13; i++) {
       if (currentBoard[i] > 0) {
         var result = _simulateMoveDetailed(currentBoard, i);
@@ -1530,33 +1565,31 @@ class _MancalaGameState extends State<MancalaGame>
     }
 
     if (bestMove != -1 && mounted) {
-      // 2. ИИ ПРИНЯЛ РЕШЕНИЕ:
+      // ИИ выбрал лунку
       setState(() {
-        isAiThinking = false; // Надпись перестает мигать
+        isAiThinking = false;
         aiSelectedPit =
-            bestMove; // ПОДСВЕЧИВАЕМ СТАРТОВУЮ ЛУНКУ (она увеличится в buildPit)
+            bestMove; // В этот момент AnimatedDefaultTextStyle в buildPit сработает!
       });
 
-      // Даем игроку время (800мс) увидеть, какую лунку выбрал ИИ
+      // Даем игроку время увидеть увеличенную цифру и белое свечение
       await Future.delayed(const Duration(milliseconds: 800));
 
       if (!mounted) return;
 
-      // 3. ДЕЛАЕМ ХОД
+      // Убираем подсветку ПЕРЕД началом движения камней
       setState(() {
-        aiSelectedPit = null; // Убираем увеличение цифры перед началом движения
+        aiSelectedPit = null;
       });
 
-      _move(bestMove); // Рассыпаем камни
+      _move(bestMove); // Запускаем анимацию разлета камней
 
-      // 4. ФИНАЛ ХОДА:
-      // Ждем достаточно времени, чтобы все камни упали (примерно 2 сек)
+      // Ждем завершения хода, чтобы убрать подсветку последней лунки (желтый ободок)
       await Future.delayed(const Duration(milliseconds: 2000));
 
       if (mounted) {
         setState(() {
-          lastDrop =
-              -1; // УБИРАЕМ ЖЕЛТЫЙ КРУГ (подсветку последней упавшей лунки)
+          lastDrop = -1;
         });
       }
     }
@@ -1649,12 +1682,14 @@ int _evaluatePosition(List<int> b) {
     // Добавляем элемент случайности в зависимости от сложности
     int randomness = 0;
     if (GameSettings.difficulty == Difficulty.easy) {
-      randomness = Random().nextInt(100) - 5; // Ошибка до 50 очков
+      // Ошибка от -50 до +50 (всего диапазон 101 число)
+      randomness = Random().nextInt(80) - 5; // Ошибка до 50 очков
     } else if (GameSettings.difficulty == Difficulty.medium) {
-      randomness = Random().nextInt(40) - 2; // Ошибка до 20 очков
+      // Ошибка от -20 до +20 (всего диапазон 41 число)
+      randomness = Random().nextInt(30) - 2;
     }
     // 1. Разница в Калахах (основной вес)
-    int score = (b[13] - b[6]) * 30 +
+    int score = (b[13] - b[6]) * 40 +
         randomness; /* Чтобы он стал «глупее», в твоем методе _evaluatePosition просто поменяй множитель в первой строке: int score = (b[13] - b[6]) * 10; (вместо 100). Тогда он будет меньше дорожить камнями в Калахе.*/
 
     // 2. БОНУС за возможность сделать доп. ход прямо сейчас

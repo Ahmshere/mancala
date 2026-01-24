@@ -1,4 +1,4 @@
-package com.example.mancala_game
+package com.woodenedition.mancala_game
 
 import io.flutter.embedding.android.FlutterActivity
 
