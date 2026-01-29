@@ -1,7 +1,7 @@
 name: Mancala_WE
 description: Classic Mancala game
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -14,6 +14,7 @@ dependencies:
   url_launcher: ^6.3.0
   sensors_plus: ^6.1.1
   shared_preferences: ^2.2.2
+  
   # google_mobile_ads: ^5.2.0
   
 
@@ -37,13 +38,14 @@ flutter:
     - assets/sounds/
     - assets/audio/
     - assets/images/background.png
+    - assets/images/wood_board.jpg
+  fonts:
+  - family: Cinzel
+    fonts:
+      - asset: assets/fonts/Cinzel-Bold.ttf
 
 flutter_icons:
   android: true
   ios: true
   image_path: "assets/icons/main_ico.png"
 
-  fonts:
-  - family: Cinzel
-    fonts:
-      - asset: assets/fonts/Cinzel-Bold.ttf

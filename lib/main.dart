@@ -13,6 +13,7 @@ import 'dart:async';
 import 'stats_screen.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+
 // import 'space_background.dart';
 
 // my_email: prudnikov.michael@aol.com
@@ -1212,14 +1213,36 @@ class _MancalaGameState extends State<MancalaGame>
     );
   }
 
+  // ИЩИ ЭТОТ МЕТОД В КОНЦЕ ФАЙЛА
   Widget _buildBoard() {
     return Container(
       padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
-          color: const Color(0xFF5D4037).withOpacity(0.8),
-          borderRadius: BorderRadius.circular(50),
-          border: Border.all(width: 10, color: const Color(0xFF3E2723)),
-          boxShadow: const [BoxShadow(color: Colors.black87, blurRadius: 20)]),
+        borderRadius: BorderRadius.circular(50),
+        border: Border.all(width: 8, color: const Color(0xFF3E2723)),
+        image: const DecorationImage(
+          image: AssetImage('assets/images/wood_board.jpg'),
+          fit: BoxFit.cover,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.6),
+            blurRadius: 15,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      // Это создаст эффект "вдавленности" центральной части доски
+      foregroundDecoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(42),
+        gradient: RadialGradient(
+          radius: 1.5,
+          colors: [
+            Colors.transparent,
+            Colors.black.withOpacity(0.4), // Тень по краям внутри доски
+          ],
+        ),
+      ),
       child: Row(
         children: [
           _buildKalah(13, Colors.orangeAccent),
@@ -1261,19 +1284,24 @@ class _MancalaGameState extends State<MancalaGame>
         width: 90,
         height: 90,
         margin: const EdgeInsets.all(5),
+        // Вставь это в BoxDecoration твоей лунки (Pit)
         decoration: BoxDecoration(
-          color: isHighlighted
-              ? Colors.white24
-              : (lastDrop == i ? Colors.white10 : Colors.black38),
           shape: BoxShape.circle,
-          border: Border.all(
-            color: isHighlighted
-                ? Colors.white
-                : (active
-                    ? Colors.amber
-                    : (lastDrop == i ? Colors.amberAccent : Colors.black45)),
-            width: isHighlighted ? 5 : (active ? 4 : 3),
-          ),
+          color: const Color(0xFF3E2723).withOpacity(0.5), // Темный фон лунки
+          boxShadow: [
+            // Светлый блик снизу (создает эффект края)
+            BoxShadow(
+              color: Colors.white.withOpacity(0.1),
+              offset: const Offset(-1, -1),
+              blurRadius: 2,
+            ),
+            // Темная тень сверху (создает глубину внутри)
+            BoxShadow(
+              color: Colors.black.withOpacity(0.5),
+              offset: const Offset(2, 2),
+              blurRadius: 4,
+            ),
+          ],
         ),
         child: Center(
           child: Stack(
