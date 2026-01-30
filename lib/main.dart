@@ -1329,39 +1329,45 @@ class _MancalaGameState extends State<MancalaGame>
           child: Stack(
             alignment: Alignment.center,
             children: [
+              // КАМНИ остаются на фоне
               _buildStones(board[i], false),
+
+              // ЦИФРА с оберткой для пульсации
               if (GameSettings.visualMode != VisualMode.stonesOnly)
-                AnimatedDefaultTextStyle(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOutBack,
-                  style: GoogleFonts.cinzel(
-                    textStyle: TextStyle(
-                      color: isHighlighted
-                          ? Colors.white
-                          : (i < 6 ? Colors.amber[100] : Colors.orange[100]),
-                      fontSize: isHighlighted
-                          ? 40
-                          : 28, // Увеличили основной шрифт до 28
-                      fontWeight: FontWeight.w900,
-                      shadows: [
-                        // ПЕРВАЯ ТЕНЬ: Всегда черная для читаемости
-                        const Shadow(
-                          color: Colors.black,
-                          blurRadius: 6,
-                          offset: Offset(2, 2),
-                        ),
-                        // ВТОРАЯ ТЕНЬ: Магическое свечение (всегда существует, но гаснет)
-                        Shadow(
-                          color: active
-                              ? (i < 6 ? Colors.amber : Colors.orange)
-                              : Colors
-                                  .transparent, // Вместо удаления тени делаем её прозрачной
-                          blurRadius: active ? 12 : 0,
-                        ),
-                      ],
+                PulseAnimation(
+                  enabled:
+                      isHighlighted, // Пульсирует ТОЛЬКО когда ход делает ИИ
+                  child: AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOutBack,
+                    style: GoogleFonts.cinzel(
+                      textStyle: TextStyle(
+                        color: isHighlighted
+                            ? Colors.white
+                            : (i < 6 ? Colors.amber[100] : Colors.orange[100]),
+                        fontSize: isHighlighted ? 44 : 28,
+                        fontWeight: FontWeight.w900,
+                        shadows: [
+                          const Shadow(
+                            color: Colors.black,
+                            blurRadius: 6,
+                            offset: Offset(2, 2),
+                          ),
+                          Shadow(
+                            color: isHighlighted
+                                ? Colors.white // Если ИИ
+                                : (active
+                                    ? (i < 6
+                                        ? Colors.amber
+                                        : Colors.orange) // Если ход игрока
+                                    : Colors.transparent),
+                            blurRadius: isHighlighted ? 25 : (active ? 12 : 0),
+                          ),
+                        ],
+                      ),
                     ),
+                    child: Text('${board[i]}'),
                   ),
-                  child: Text('${board[i]}'),
                 ),
             ],
           ),
