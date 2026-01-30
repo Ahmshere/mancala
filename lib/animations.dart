@@ -411,16 +411,22 @@ class _Particle {
   }
 }
 
+/// УЛУЧШЕННАЯ АНИМАЦИЯ ПОЛЁТА КАМНЯ С ПАРАБОЛИЧЕСКОЙ ТРАЕКТОРИЕЙ И СЛЕДОМ
 class FlyingStone extends StatefulWidget {
   final Offset start;
   final Offset end;
   final VoidCallback onComplete;
+  final int stoneIndex; // Индекс камня для задержки
+  final Color? color; // Цвет камня
 
-  const FlyingStone(
-      {super.key,
-      required this.start,
-      required this.end,
-      required this.onComplete});
+  const FlyingStone({
+    super.key,
+    required this.start,
+    required this.end,
+    required this.onComplete,
+    this.stoneIndex = 0,
+    this.color,
+  });
 
   @override
   State<FlyingStone> createState() => _FlyingStoneState();
@@ -430,16 +436,49 @@ class _FlyingStoneState extends State<FlyingStone>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
+  final List<Offset> _trail = []; // След за камнем
+  late Color stoneColor; // Цвет для этого конкретного камня
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-        duration: const Duration(milliseconds: 800), vsync: this);
-    _animation =
-        CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic);
 
-    _controller.forward().then((_) => widget.onComplete());
+    // Генерируем случайный цвет для каждого камня
+    final random =
+        Random(widget.stoneIndex + DateTime.now().millisecondsSinceEpoch);
+    stoneColor = widget.color ??
+        [
+          Colors.amber,
+          Colors.orange,
+          Colors.deepOrange,
+          Colors.orangeAccent,
+          Color(0xFFFFB74D), // Светло-оранжевый
+          Color(0xFFFF9800), // Оранжевый
+          Color(0xFFFFA726), // Янтарный
+          Color(0xFFFFAB40), // Акцент
+        ][random.nextInt(8)];
+
+    // Задержка между камнями для красивого каскадного эффекта
+    int delay = widget.stoneIndex * 80; // 80ms между камнями
+
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOutCubic,
+    );
+
+    // Запускаем анимацию с задержкой
+    Future.delayed(Duration(milliseconds: delay), () {
+      if (mounted) {
+        _controller.forward().then((_) {
+          if (mounted) widget.onComplete();
+        });
+      }
+    });
   }
 
   @override
@@ -454,36 +493,148 @@ class _FlyingStoneState extends State<FlyingStone>
       animation: _animation,
       builder: (context, child) {
         double t = _animation.value.clamp(0.0, 1.0);
-        // Вычисляем траекторию дуги (парабола)
-        // x — линейно, y — с выгибом вверх
+
+        // Расстояние между точками для расчёта высоты дуги
+        double distance = (widget.end - widget.start).distance;
+
+        // Высота дуги зависит от расстояния (чем дальше, тем выше)
+        double arcHeight = min(distance * 0.4, 120.0);
+
+        // Вычисляем текущую позицию по параболе
         double dx = ui.lerpDouble(widget.start.dx, widget.end.dx, t)!;
         double dy = ui.lerpDouble(widget.start.dy, widget.end.dy, t)! -
-            (sin(pi * t) * 150);
-        return Positioned(
-          left: dx,
-          top: dy,
-          child: Container(
-            width: 12,
-            height: 12,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.amberAccent,
-              boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 4)],
+            (sin(pi * t) * arcHeight);
+
+        Offset currentPos = Offset(dx, dy);
+
+        // Добавляем текущую позицию в след (максимум 5 точек)
+        if (_trail.length > 5) _trail.removeAt(0);
+        _trail.add(currentPos);
+
+        // Размер камня меняется: УМЕНЬШЕН до размера обычных камней (10px)
+        double baseSize = 10.0; // Базовый размер как у камней в лунке
+        double scale = 1.0;
+        if (t < 0.3) {
+          scale = ui.lerpDouble(1.0, 1.3, t / 0.3)!;
+        } else if (t > 0.7) {
+          scale = ui.lerpDouble(1.3, 1.0, (t - 0.7) / 0.3)!;
+        } else {
+          scale = 1.3;
+        }
+
+        double currentSize = baseSize * scale;
+
+        return Stack(
+          children: [
+            // СЛЕД ЗА КАМНЕМ
+            ..._trail.asMap().entries.map((entry) {
+              int idx = entry.key;
+              Offset pos = entry.value;
+              double opacity =
+                  (idx / _trail.length) * 0.3; // Градиент прозрачности
+              double size =
+                  8 * (idx / _trail.length); // Уменьшающийся размер следа
+
+              return Positioned(
+                left: pos.dx - size / 2,
+                top: pos.dy - size / 2,
+                child: IgnorePointer(
+                  // Игнорируем клики на след
+                  child: Opacity(
+                    opacity: opacity,
+                    child: Container(
+                      width: size,
+                      height: size,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: stoneColor.withOpacity(0.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: stoneColor.withOpacity(0.2),
+                            blurRadius: 6,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+
+            // САМ КАМЕНЬ
+            Positioned(
+              left: dx - currentSize / 2,
+              top: dy - currentSize / 2,
+              child: IgnorePointer(
+                // Игнорируем клики на летящий камень
+                child: Transform.rotate(
+                  angle: t * pi * 2, // Вращение камня в полёте
+                  child: Container(
+                    width: currentSize,
+                    height: currentSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          Colors.white.withOpacity(0.8),
+                          stoneColor,
+                          stoneColor.withOpacity(0.7),
+                        ],
+                        center: const Alignment(-0.3, -0.3),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black38,
+                          blurRadius: 4,
+                          offset: Offset(1, 1),
+                        ),
+                        BoxShadow(
+                          color: stoneColor.withOpacity(0.4),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         );
       },
     );
   }
 }
+
 /* Вспомогательный класс для описания свойств каждой частицы конфетти */
 
 /*
+Настройки анимации полёта камней:
+
+1. СКОРОСТЬ КАМНЕЙ:
+   - Измени duration в FlyingStone (сейчас 600ms)
+   - Меньше = быстрее полёт
+
+2. ЗАДЕРЖКА МЕЖДУ КАМНЯМИ:
+   - int delay = widget.stoneIndex * 80
+   - Больше число = больше пауза между камнями
+
+3. ВЫСОТА ДУГИ:
+   - double arcHeight = min(distance * 0.4, 120.0)
+   - Увеличь 0.4 для более высоких дуг
+
+4. ДЛИНА СЛЕДА:
+   - if (_trail.length > 5) - измени 5 на другое число
+   - Больше = длиннее след
+
+5. РАЗМЕР КАМНЕЙ В ПОЛЁТЕ:
+   - scale = ui.lerpDouble(1.0, 1.4, ...)
+   - Измени 1.4 для другого размера
+
 Хочешь больше камней в конфетти? Измени List.generate(60, ...) на 100.
 
-Хочешь, чтобы конфетти падало медленнее? Увеличь duration в StoneConfetti с 4 до 6 секунд.
+Хочешь, чтобы конфетти падало медленнее? Увеличь duration в StoneConfetti с 6 до 8 секунд.
 
 Хочешь, чтобы камни в лунках появлялись быстрее? В AnimatedStone уменьши duration с 500 до 200 мс.
-
-Хочешь изменить "хаотичность" падения? В классе ConfettiParticle поиграй со значением fallSpeed. Чем больше разброс между числами, тем более неравномерным будет дождь.
 */

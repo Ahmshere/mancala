@@ -675,6 +675,9 @@ class _MancalaGameState extends State<MancalaGame>
   late AnimationController _magicRotationController;
   final List<GlobalKey> pitKeys = List.generate(14, (index) => GlobalKey());
   List<Widget> captureAnimations = []; // Здесь будут храниться летящие камни
+  int?
+      _activeMovePit; // Лунка, из которой сейчас летят камни (скрываем визуально)
+  Map<int, bool> _shakeTriggers = {}; // Триггеры дрожания для каждой лунки
 
   //метод для вычисления экранных координат и запуска FlyingStone
   void _animateCapture(int fromIndex, int toIndex) {
@@ -702,6 +705,42 @@ class _MancalaGameState extends State<MancalaGame>
       end: endPos,
       onComplete: () {
         print("ПОЛЕТ ЗАВЕРШЕН");
+        if (mounted) {
+          setState(() {
+            captureAnimations.remove(flying);
+          });
+        }
+      },
+    );
+
+    setState(() {
+      captureAnimations.add(flying);
+    });
+  }
+
+  // Новый метод для анимации полёта камня при обычном ходе
+  void _animateStoneFlight(int fromIndex, int toIndex, int stoneIndex) {
+    if (pitKeys[fromIndex].currentContext == null ||
+        pitKeys[toIndex].currentContext == null) {
+      return;
+    }
+
+    final RenderBox boxFrom =
+        pitKeys[fromIndex].currentContext!.findRenderObject() as RenderBox;
+    final RenderBox boxTo =
+        pitKeys[toIndex].currentContext!.findRenderObject() as RenderBox;
+
+    final Offset startPos = boxFrom
+        .localToGlobal(Offset(boxFrom.size.width / 2, boxFrom.size.height / 2));
+    final Offset endPos = boxTo
+        .localToGlobal(Offset(boxTo.size.width / 2, boxTo.size.height / 2));
+
+    late Widget flying;
+    flying = FlyingStone(
+      start: startPos,
+      end: endPos,
+      stoneIndex: stoneIndex, // Передаём индекс для задержки
+      onComplete: () {
         if (mounted) {
           setState(() {
             captureAnimations.remove(flying);
@@ -988,14 +1027,12 @@ class _MancalaGameState extends State<MancalaGame>
     return Stack(
       alignment: Alignment.center,
       children: List.generate(visibleStones, (index) {
-        // Используем Random с фиксированным зерном (seed),
+        // Используем Random с фиксированным зерном (seed) ТОЛЬКО на основе индекса,
         // чтобы камни в конкретной лунке лежали всегда в одних и тех же местах
-        // final rnd = Random(index * 100);
-        final rnd = Random(index * 100 + count);
+        // ВАЖНО: не добавляем count, иначе позиции будут меняться при добавлении камней!
+        final rnd = Random(index * 100);
 
         // Хаотичное смещение от центра
-        //double randomRadius = rnd.nextDouble() * maxRadius;
-        //double randomAngle = rnd.nextDouble() * 2 * pi;
         double randomRadius = sqrt(rnd.nextDouble()) * maxRadius;
         double randomAngle = rnd.nextDouble() * 2 * pi;
 
@@ -1282,94 +1319,107 @@ class _MancalaGameState extends State<MancalaGame>
             i < 13 &&
             board[i] > 0);
 
-    return GestureDetector(
-      key: pitKeys[i],
-      onTap: () => active && !animating && !isAiThinking ? _move(i) : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        width: 90,
-        height: 90,
-        margin: const EdgeInsets.all(5),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: const Color(0xFF1B100E).withOpacity(0.85),
-          boxShadow: [
-            // 1. ПОДСВЕТКА ЛУНКИ
-            BoxShadow(
-              color: active
-                  ? (i < 6
-                      ? Colors.amber.withOpacity(0.5)
-                      : Colors.deepOrange.withOpacity(0.5))
-                  : (i < 6
-                      ? Colors.amber.withOpacity(0)
-                      : Colors.deepOrange.withOpacity(0)),
-              // ДОБАВИЛИ .clamp(0.0, 50.0) — теперь радиус не будет отрицательным!
-              blurRadius: (active ? 15.0 : 0.0).clamp(0.0, 50.0),
-              spreadRadius: (active ? 2.0 : 0.0).clamp(0.0, 20.0),
-            ),
-            // 2. БЛИК ГЛУБИНЫ
-            BoxShadow(
-              color: Colors.white.withOpacity(0.12),
-              offset: const Offset(1, 2),
-              blurRadius: 2,
-            ),
-          ],
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.black.withOpacity(0.8),
-              Colors.black.withOpacity(0.2)
+    return ShakeAnimation(
+      trigger: _shakeTriggers[i] ?? false,
+      onComplete: () {
+        if (mounted) {
+          setState(() {
+            _shakeTriggers[i] = false;
+          });
+        }
+      },
+      child: GestureDetector(
+        key: pitKeys[i],
+        onTap: () => active && !animating && !isAiThinking ? _move(i) : null,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          width: 90,
+          height: 90,
+          margin: const EdgeInsets.all(5),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: const Color(0xFF1B100E).withOpacity(0.85),
+            boxShadow: [
+              // 1. ПОДСВЕТКА ЛУНКИ
+              BoxShadow(
+                color: active
+                    ? (i < 6
+                        ? Colors.amber.withOpacity(0.5)
+                        : Colors.deepOrange.withOpacity(0.5))
+                    : (i < 6
+                        ? Colors.amber.withOpacity(0)
+                        : Colors.deepOrange.withOpacity(0)),
+                // ДОБАВИЛИ .clamp(0.0, 50.0) — теперь радиус не будет отрицательным!
+                blurRadius: (active ? 15.0 : 0.0).clamp(0.0, 50.0),
+                spreadRadius: (active ? 2.0 : 0.0).clamp(0.0, 20.0),
+              ),
+              // 2. БЛИК ГЛУБИНЫ
+              BoxShadow(
+                color: Colors.white.withOpacity(0.12),
+                offset: const Offset(1, 2),
+                blurRadius: 2,
+              ),
             ],
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.black.withOpacity(0.8),
+                Colors.black.withOpacity(0.2)
+              ],
+            ),
           ),
-        ),
-        child: Center(
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              _buildStones(board[i], false),
-              if (GameSettings.visualMode != VisualMode.stonesOnly)
-                PulseAnimation(
-                  enabled: isHighlighted,
-                  child: AnimatedDefaultTextStyle(
-                    // ЗАМЕНА: Используем стандартный Curves.linear или Curves.easeInOut
-                    // Они никогда не выдают отрицательных значений в процессе анимации
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeInOut,
-                    style: GoogleFonts.cinzel(
-                      textStyle: TextStyle(
-                        color: isHighlighted
-                            ? Colors.white
-                            : (i < 6 ? Colors.amber[100] : Colors.orange[100]),
-                        fontSize: isHighlighted ? 44 : 28,
-                        fontWeight: FontWeight.w900,
-                        shadows: [
-                          // 1. Стабильная тень
-                          const Shadow(
-                            color: Colors.black,
-                            blurRadius: 6,
-                            offset: Offset(2, 2),
-                          ),
-                          // 2. Магическая тень (Защищенная)
-                          Shadow(
-                            color: isHighlighted
-                                ? Colors.white
-                                : (active
-                                    ? (i < 6 ? Colors.amber : Colors.orange)
-                                    : (i < 6
-                                        ? Colors.amber.withOpacity(0)
-                                        : Colors.orange.withOpacity(0))),
-                            // Убираем сложные вычисления радиуса, оставляем простые double
-                            blurRadius:
-                                isHighlighted ? 25.0 : (active ? 12.0 : 0.0),
-                          ),
-                        ],
+          child: Center(
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Скрываем камни, если это стартовая лунка текущего хода
+                if (i != _activeMovePit) _buildStones(board[i], false),
+                if (GameSettings.visualMode != VisualMode.stonesOnly)
+                  PulseAnimation(
+                    enabled: isHighlighted,
+                    child: AnimatedDefaultTextStyle(
+                      // ЗАМЕНА: Используем стандартный Curves.linear или Curves.easeInOut
+                      // Они никогда не выдают отрицательных значений в процессе анимации
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOut,
+                      style: GoogleFonts.cinzel(
+                        textStyle: TextStyle(
+                          color: isHighlighted
+                              ? Colors.white
+                              : (i < 6
+                                  ? Colors.amber[100]
+                                  : Colors.orange[100]),
+                          fontSize: isHighlighted ? 44 : 28,
+                          fontWeight: FontWeight.w900,
+                          shadows: [
+                            // 1. Стабильная тень
+                            const Shadow(
+                              color: Colors.black,
+                              blurRadius: 6,
+                              offset: Offset(2, 2),
+                            ),
+                            // 2. Магическая тень (Защищенная)
+                            Shadow(
+                              color: isHighlighted
+                                  ? Colors.white
+                                  : (active
+                                      ? (i < 6 ? Colors.amber : Colors.orange)
+                                      : (i < 6
+                                          ? Colors.amber.withOpacity(0)
+                                          : Colors.orange.withOpacity(0))),
+                              // Убираем сложные вычисления радиуса, оставляем простые double
+                              blurRadius:
+                                  isHighlighted ? 25.0 : (active ? 12.0 : 0.0),
+                            ),
+                          ],
+                        ),
                       ),
+                      child: Text('${board[i]}'),
                     ),
-                    child: Text('${board[i]}'),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -1419,30 +1469,70 @@ class _MancalaGameState extends State<MancalaGame>
       _canUndo = true;
     }
     int stones = board[start];
-    board[start] = 0;
+    // НЕ обнуляем сразу! board[start] = 0 будет после запуска анимаций
     int curr = start;
 
-    // 1. РАСКЛАДЫВАЕМ КАМНИ
+    // Устанавливаем флаг, чтобы скрыть камни визуально в этой лунке
+    setState(() {
+      _activeMovePit = start;
+    });
+
+    // Запускаем звук для стартовой лунки
+    HapticFeedback.lightImpact();
+
+    // 1. РАСКЛАДЫВАЕМ КАМНИ С АНИМАЦИЕЙ ПОЛЁТА
+    int stoneIndex = 0;
+    List<int> targetPits = []; // Сохраняем целевые лунки для камней
+
     while (stones > 0) {
       curr = (curr + 1) % 14;
       // Пропуск чужого Калаха
       if (start < 6 && curr == 13) curr = 0;
       if (start > 6 && curr == 6) curr = 7;
 
-      await Future.delayed(const Duration(milliseconds: 300));
+      targetPits.add(curr);
 
-      HapticFeedback.lightImpact();
-      _stoneAnimController.forward(from: 0);
+      // Запускаем анимацию полёта камня
+      _animateStoneFlight(start, curr, stoneIndex);
 
-      setState(() {
-        board[curr]++;
-        lastDrop = curr;
-        stones--;
-      });
+      stoneIndex++;
+      stones--;
     }
 
-    // Ждем завершения последней анимации падения
-    await Future.delayed(const Duration(milliseconds: 300));
+    // Обнуляем стартовую лунку СРАЗУ после запуска всех анимаций
+    setState(() {
+      board[start] = 0;
+      _activeMovePit = null; // Сбрасываем флаг
+    });
+
+    // Ждём завершения всех анимаций полёта
+    // Время = базовая задержка + время на последний камень + анимация
+    int totalDelay = (stoneIndex - 1) * 200 +
+        800 +
+        200; // 100ms задержка между камнями + 800ms полёт + 200ms буфер
+    await Future.delayed(Duration(milliseconds: totalDelay));
+
+    // Обновляем доску после завершения всех анимаций
+    setState(() {
+      for (int pit in targetPits) {
+        board[pit]++;
+        lastDrop = pit;
+        // Запускаем дрожание для каждой лунки, в которую упал камень
+        _shakeTriggers[pit] = true;
+      }
+      // Принудительно очищаем все анимации на всякий случай
+      captureAnimations.clear();
+    });
+
+    // Звук приземления камней
+    if (GameSettings.isSoundOn) {
+      HapticFeedback.mediumImpact();
+      // Можно добавить звуковой эффект через AudioManager
+      // AudioManager().playStoneLanding();
+    }
+
+    // Даём время на финальную анимацию появления камней в лунке
+    await Future.delayed(const Duration(milliseconds: 400));
 
     // 2. ЛОГИКА ЗАХВАТА
     // ЛОГИКА ЗАХВАТА
