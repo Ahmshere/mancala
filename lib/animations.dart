@@ -8,11 +8,12 @@ import 'dart:ui' as ui;
    Отвечает за плавное появление и "подпрыгивание" камней при их добавлении.
    ========================================================================== */
 class AnimatedStone extends StatefulWidget {
-final double angle;  // Угол размещения (для кругового или хаотичного расположения)
+  final double
+      angle; // Угол размещения (для кругового или хаотичного расположения)
   final double radius; // Радиус разброса от центра лунки
   final List<Color> colors; // Список цветов для градиента (светлый и темный)
-  final int index;     // Порядковый номер камня (используется для задержки)
-  final int delay;     // Задержка перед началом анимации появления (в мс)
+  final int index; // Порядковый номер камня (используется для задержки)
+  final int delay; // Задержка перед началом анимации появления (в мс)
 
   const AnimatedStone({
     super.key,
@@ -27,7 +28,7 @@ final double angle;  // Угол размещения (для кругового
   State<AnimatedStone> createState() => _AnimatedStoneState();
 }
 
-class _AnimatedStoneState extends State<AnimatedStone> 
+class _AnimatedStoneState extends State<AnimatedStone>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
@@ -263,32 +264,31 @@ class _PulseAnimationState extends State<PulseAnimation>
     );
   }
 
-
 // Конфетюги
 /* ==========================================================================
    2. ЭФФЕКТ КОНФЕТТИ (StoneConfetti)
    Создает дождь из вращающихся разноцветных камней при победе.
    ========================================================================== */
-  
 }
+
 class StoneConfetti extends StatefulWidget {
   const StoneConfetti({super.key});
   @override
   State<StoneConfetti> createState() => _StoneConfettiState();
 }
 
-class _StoneConfettiState extends State<StoneConfetti> with SingleTickerProviderStateMixin {
+class _StoneConfettiState extends State<StoneConfetti>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   final List<_Particle> particles = List.generate(60, (i) => _Particle());
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this, 
-      duration: const Duration(seconds: 4)
-    )..repeat();
-  } 
+    _controller =
+        AnimationController(vsync: this, duration: const Duration(seconds: 6))
+          ..repeat();
+  }
 
   @override
   void dispose() {
@@ -304,41 +304,37 @@ class _StoneConfettiState extends State<StoneConfetti> with SingleTickerProvider
         final size = MediaQuery.of(context).size;
         return Stack(
           children: particles.map((p) {
-            double progress = _controller.value;
-            // Рассчитываем падение
-            double currentY = ((p.y + progress * p.fallSpeed) % 1.5 - 0.2) * size.height;
-            // Вращение как "колесо"
-            double rotationZ = progress * p.rotationSpeed;
-            // Вращение как "монетка" (перевороты)
-            double rotationX = progress * p.spinSpeed;
+            // ОБНОВЛЯЕМ логику частицы на каждом кадре
+            p.update();
+
+            double rotationZ = _controller.value * p.rotationSpeed;
+            double rotationX = _controller.value * p.spinSpeed;
 
             return Positioned(
               left: p.x * size.width,
-              top: currentY,
-              child: Transform(
-                // Создаем 3D-эффект
-                transform: Matrix4.identity()
-                  ..setEntry(3, 2, 0.001) // Перспектива
-                  ..rotateX(rotationX)    // Кувырок вперед
-                  ..rotateZ(rotationZ),   // Вращение в плоскости
-                alignment: Alignment.center,
-                child: Container(
-                  width: p.size, 
-                  height: p.size,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: p.color,
-                    gradient: RadialGradient(
-                      colors: [p.color.withOpacity(0.7), p.color],
-                      center: const Alignment(-0.3, -0.3),
+              top: p.y * size.height,
+              child: Opacity(
+                opacity: p.opacity.clamp(0, 1),
+                child: Transform(
+                  transform: Matrix4.identity()
+                    ..setEntry(3, 2, 0.001)
+                    ..rotateX(rotationX)
+                    ..rotateZ(rotationZ),
+                  alignment: Alignment.center,
+                  child: Container(
+                    width: p.size,
+                    height: p.size,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: p.color,
+                      boxShadow: [
+                        BoxShadow(
+                          color: p.color.withOpacity(0.5),
+                          blurRadius: 10, // Свечение (glow)
+                          spreadRadius: 2,
+                        ),
+                      ],
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black26, 
-                        blurRadius: 2, 
-                        offset: Offset(cos(rotationZ), sin(rotationZ))
-                      )
-                    ],
                   ),
                 ),
               ),
@@ -351,44 +347,97 @@ class _StoneConfettiState extends State<StoneConfetti> with SingleTickerProvider
 }
 
 class _Particle {
-  double x = Random().nextDouble();
-  double y = Random().nextDouble() * -1; // Разбрасываем начальную высоту
-  double size = 8.0 + Random().nextDouble() * 6.0; // Разный размер камней
-  
-  double rotationSpeed = (Random().nextDouble() - 0.5) * 10; // Вращение вокруг центра
-  double spinSpeed = Random().nextDouble() * 12; // Скорость "кувырков"
-  double fallSpeed = 1.0 + Random().nextDouble() * 1.5; // Скорость падения
-  
-  Color color = [
-    Colors.tealAccent, 
-    Colors.orangeAccent, 
-    Colors.redAccent, 
-    Colors.blueAccent, 
-    Colors.amberAccent,
-    Colors.purpleAccent,
-  ][Random().nextInt(6)];
+  late double x, y;
+  late double vx, vy;
+  late double size;
+  late double spiralSpeed;
+  late double opacity;
+  late Color color;
+  late double rotationSpeed;
+  late double spinSpeed;
+
+  _Particle() {
+    reset();
+  }
+
+  void reset() {
+    // Начинаем из центра экрана (0.5 - это середина в относительных координатах)
+    x = 0.5;
+    y = 0.4; // Чуть выше центра, за диалогом
+
+    // Выбираем случайный угол для разлета
+    double angle = Random().nextDouble() * 2 * pi;
+    double speed = 0.002 + Random().nextDouble() * 0.005;
+
+    vx = cos(angle) * speed;
+    vy = sin(angle) * speed;
+
+    // Скорость закручивания в спираль
+    spiralSpeed = (Random().nextDouble() - 0.5) * 0.07;
+
+    size = 4.0 + Random().nextDouble() * 6.0;
+    opacity = 1.0;
+
+    rotationSpeed = (Random().nextDouble() - 0.5) * 10;
+    spinSpeed = Random().nextDouble() * 12;
+
+    color = [
+      Colors.tealAccent,
+      Colors.orangeAccent,
+      Colors.amberAccent,
+      Colors.purpleAccent,
+      Colors.deepPurpleAccent,
+      Colors.cyanAccent,
+      Colors.amber,
+      Colors.indigoAccent,
+    ][Random().nextInt(8)];
+  }
+
+  // Метод для обновления позиции (вызовем его в билдере)
+  void update() {
+    // Магия спирали: немного поворачиваем вектор скорости
+    double oldVx = vx;
+    vx = vx * cos(spiralSpeed) - vy * sin(spiralSpeed);
+    vy = oldVx * sin(spiralSpeed) + vy * cos(spiralSpeed);
+
+    x += vx;
+    y += vy;
+    opacity -= 0.0015; // Частицы медленно гаснут
+
+    if (opacity <= 0 || x < -0.2 || x > 1.2 || y > 1.2) {
+      reset();
+    }
+  }
 }
+
 class FlyingStone extends StatefulWidget {
   final Offset start;
   final Offset end;
   final VoidCallback onComplete;
 
-  const FlyingStone({super.key, required this.start, required this.end, required this.onComplete});
+  const FlyingStone(
+      {super.key,
+      required this.start,
+      required this.end,
+      required this.onComplete});
 
   @override
   State<FlyingStone> createState() => _FlyingStoneState();
 }
 
-class _FlyingStoneState extends State<FlyingStone> with SingleTickerProviderStateMixin {
+class _FlyingStoneState extends State<FlyingStone>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(duration: const Duration(milliseconds: 800), vsync: this);
-    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic);
-    
+    _controller = AnimationController(
+        duration: const Duration(milliseconds: 800), vsync: this);
+    _animation =
+        CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic);
+
     _controller.forward().then((_) => widget.onComplete());
   }
 
@@ -407,12 +456,14 @@ class _FlyingStoneState extends State<FlyingStone> with SingleTickerProviderStat
         // Вычисляем траекторию дуги (парабола)
         // x — линейно, y — с выгибом вверх
         double dx = ui.lerpDouble(widget.start.dx, widget.end.dx, t)!;
-        double dy = ui.lerpDouble(widget.start.dy, widget.end.dy, t)! - (sin(pi * t) * 150);
+        double dy = ui.lerpDouble(widget.start.dy, widget.end.dy, t)! -
+            (sin(pi * t) * 150);
         return Positioned(
           left: dx,
           top: dy,
           child: Container(
-            width: 12, height: 12,
+            width: 12,
+            height: 12,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.amberAccent,

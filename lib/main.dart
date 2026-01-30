@@ -672,7 +672,7 @@ class _MancalaGameState extends State<MancalaGame>
   List<int>? _lastBoardState; // Состояние доски до хода
   bool? _lastTurnState; // Чей был ход
   bool _canUndo = false; // Можно ли сейчас отменить ход
-
+  late AnimationController _magicRotationController;
   final List<GlobalKey> pitKeys = List.generate(14, (index) => GlobalKey());
   List<Widget> captureAnimations = []; // Здесь будут храниться летящие камни
 
@@ -815,6 +815,11 @@ class _MancalaGameState extends State<MancalaGame>
       vsync: this,
     );
     startTime = DateTime.now();
+
+    _magicRotationController = AnimationController(
+      duration: const Duration(seconds: 5),
+      vsync: this,
+    ); //..repeat();
   }
 
   @override
@@ -822,6 +827,7 @@ class _MancalaGameState extends State<MancalaGame>
     WidgetsBinding.instance.removeObserver(this);
     // _starController.dispose();
     _stoneAnimController.dispose();
+    _magicRotationController.dispose();
     super.dispose();
   }
 
@@ -867,16 +873,18 @@ class _MancalaGameState extends State<MancalaGame>
       AudioManager().playSfx(AudioManager.winSound);
       winner = txt['draw']!;
     }
-
+    _magicRotationController.repeat();
     // ... далее код вызова самого Dialog
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => Stack(
         children: [
-          // 1. Слой конфетти (будет летать на заднем фоне за диалогом и по всему экрану)
-          const IgnorePointer(
-            child: StoneConfetti(),
+          // 1. Слой "Магического вихря"
+          IgnorePointer(
+            child: Center(
+              child: const StoneConfetti(),
+            ),
           ),
 
           // 2. Слой самого диалога
@@ -1266,9 +1274,8 @@ class _MancalaGameState extends State<MancalaGame>
     Радиус скругления: borderRadius: BorderRadius.circular(35)
   */
   Widget _buildPit(int i) {
-    // 1. ПЕРЕМЕННЫЕ (Важно: используй i, так как это индекс лунки)
-    bool isHighlighted = aiSelectedPit == i; // Подсветка для ИИ
-
+    // --- ТВОЯ ЛОГИКА ---
+    bool isHighlighted = aiSelectedPit == i;
     bool active = (isP1Turn && i < 6 && board[i] > 0) ||
         (!isP1Turn &&
             widget.mode == GameMode.pvp &&
@@ -1280,37 +1287,49 @@ class _MancalaGameState extends State<MancalaGame>
       key: pitKeys[i],
       onTap: () => active && !animating && !isAiThinking ? _move(i) : null,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
+        duration:
+            const Duration(milliseconds: 250), // Плавность появления подсветки
         width: 90,
         height: 90,
         margin: const EdgeInsets.all(5),
-        // Вставь это в BoxDecoration твоей лунки (Pit)
+
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: const Color(0xFF3E2723).withOpacity(0.5), // Темный фон лунки
+          color: const Color(0xFF1B100E).withOpacity(0.85),
           boxShadow: [
-            // Светлый блик снизу (создает эффект края)
+            // 1. ТВОЯ ПОДСВЕТКА (Внешнее свечение вокруг активных лунок)
             BoxShadow(
-              color: Colors.white.withOpacity(0.1),
-              offset: const Offset(-1, -1),
+              color: active
+                  ? (i < 6
+                      ? Colors.amber.withOpacity(0.5)
+                      : Colors.deepOrange.withOpacity(0.5))
+                  : Colors.transparent, // Всегда возвращаем объект
+              blurRadius: active ? 15 : 0,
+              spreadRadius: active ? 2 : 0,
+            ),
+
+            // 2. Светлый блик снизу (для эффекта глубины)
+            BoxShadow(
+              color: Colors.white.withOpacity(0.12),
+              offset: const Offset(1, 2),
               blurRadius: 2,
             ),
-            // Темная тень сверху (создает глубину внутри)
-            BoxShadow(
-              color: Colors.black.withOpacity(0.5),
-              offset: const Offset(2, 2),
-              blurRadius: 4,
-            ),
           ],
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.black.withOpacity(0.8),
+              Colors.black.withOpacity(0.2),
+            ],
+          ),
         ),
+
         child: Center(
           child: Stack(
             alignment: Alignment.center,
             children: [
-              // КАМНИ остаются на фоне
               _buildStones(board[i], false),
-
-              // ЦИФРА с новой плавной анимацией
               if (GameSettings.visualMode != VisualMode.stonesOnly)
                 AnimatedDefaultTextStyle(
                   duration: const Duration(milliseconds: 300),
@@ -1319,16 +1338,26 @@ class _MancalaGameState extends State<MancalaGame>
                     textStyle: TextStyle(
                       color: isHighlighted
                           ? Colors.white
-                          : (i < 6
-                              ? Colors.amber[200]
-                              : Colors.deepOrange[200]),
-                      fontSize: isHighlighted ? 40 : 22,
+                          : (i < 6 ? Colors.amber[100] : Colors.orange[100]),
+                      fontSize: isHighlighted
+                          ? 40
+                          : 28, // Увеличили основной шрифт до 28
                       fontWeight: FontWeight.w900,
                       shadows: [
+                        // ПЕРВАЯ ТЕНЬ: Всегда черная для читаемости
+                        const Shadow(
+                          color: Colors.black,
+                          blurRadius: 6,
+                          offset: Offset(2, 2),
+                        ),
+                        // ВТОРАЯ ТЕНЬ: Магическое свечение (всегда существует, но гаснет)
                         Shadow(
-                          color: isHighlighted ? Colors.white : Colors.black,
-                          blurRadius: isHighlighted ? 15 : 4,
-                        )
+                          color: active
+                              ? (i < 6 ? Colors.amber : Colors.orange)
+                              : Colors
+                                  .transparent, // Вместо удаления тени делаем её прозрачной
+                          blurRadius: active ? 12 : 0,
+                        ),
                       ],
                     ),
                   ),
@@ -1604,7 +1633,7 @@ class _MancalaGameState extends State<MancalaGame>
       });
 
       // Даем игроку время увидеть увеличенную цифру и белое свечение
-      await Future.delayed(const Duration(milliseconds: 800));
+      await Future.delayed(const Duration(milliseconds: 1000));
 
       if (!mounted) return;
 
