@@ -83,7 +83,7 @@ class _AnimatedStoneState extends State<AnimatedStone>
           child: Opacity(
             opacity: _opacityAnimation.value,
             child: Transform.scale(
-              scale: _scaleAnimation.value,
+              scale: _scaleAnimation.value.clamp(0.0, 2.0),
               child: Container(
                 width: 10,
                 height: 10,
@@ -186,7 +186,7 @@ class _StoneTransferAnimationState extends State<StoneTransferAnimation>
           left: _positionAnimation.value.dx,
           top: _positionAnimation.value.dy,
           child: Transform.scale(
-            scale: _scaleAnimation.value,
+            scale: _scaleAnimation.value.clamp(0.0, 2.0),
             child: Container(
               width: 12,
               height: 12,
@@ -301,6 +301,7 @@ class _StoneConfettiState extends State<StoneConfetti>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
+        double progress = _controller.value;
         final size = MediaQuery.of(context).size;
         return Stack(
           children: particles.map((p) {
@@ -314,7 +315,7 @@ class _StoneConfettiState extends State<StoneConfetti>
               left: p.x * size.width,
               top: p.y * size.height,
               child: Opacity(
-                opacity: p.opacity.clamp(0, 1),
+                opacity: (1.0 - (progress * 0.5)).clamp(0.0, 1.0),
                 child: Transform(
                   transform: Matrix4.identity()
                     ..setEntry(3, 2, 0.001)
@@ -322,8 +323,8 @@ class _StoneConfettiState extends State<StoneConfetti>
                     ..rotateZ(rotationZ),
                   alignment: Alignment.center,
                   child: Container(
-                    width: p.size,
-                    height: p.size,
+                    width: p.size.clamp(0.0, 50.0),
+                    height: p.size.clamp(0.0, 50.0),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: p.color,
@@ -452,7 +453,7 @@ class _FlyingStoneState extends State<FlyingStone>
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
-        double t = _animation.value;
+        double t = _animation.value.clamp(0.0, 1.0);
         // Вычисляем траекторию дуги (парабола)
         // x — линейно, y — с выгибом вверх
         double dx = ui.lerpDouble(widget.start.dx, widget.end.dx, t)!;

@@ -1274,7 +1274,6 @@ class _MancalaGameState extends State<MancalaGame>
     Радиус скругления: borderRadius: BorderRadius.circular(35)
   */
   Widget _buildPit(int i) {
-    // --- ТВОЯ ЛОГИКА ---
     bool isHighlighted = aiSelectedPit == i;
     bool active = (isP1Turn && i < 6 && board[i] > 0) ||
         (!isP1Turn &&
@@ -1287,28 +1286,28 @@ class _MancalaGameState extends State<MancalaGame>
       key: pitKeys[i],
       onTap: () => active && !animating && !isAiThinking ? _move(i) : null,
       child: AnimatedContainer(
-        duration:
-            const Duration(milliseconds: 250), // Плавность появления подсветки
+        duration: const Duration(milliseconds: 250),
         width: 90,
         height: 90,
         margin: const EdgeInsets.all(5),
-
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: const Color(0xFF1B100E).withOpacity(0.85),
           boxShadow: [
-            // 1. ТВОЯ ПОДСВЕТКА (Внешнее свечение вокруг активных лунок)
+            // 1. ПОДСВЕТКА ЛУНКИ
             BoxShadow(
               color: active
                   ? (i < 6
                       ? Colors.amber.withOpacity(0.5)
                       : Colors.deepOrange.withOpacity(0.5))
-                  : Colors.transparent, // Всегда возвращаем объект
-              blurRadius: active ? 15 : 0,
-              spreadRadius: active ? 2 : 0,
+                  : (i < 6
+                      ? Colors.amber.withOpacity(0)
+                      : Colors.deepOrange.withOpacity(0)),
+              // ДОБАВИЛИ .clamp(0.0, 50.0) — теперь радиус не будет отрицательным!
+              blurRadius: (active ? 15.0 : 0.0).clamp(0.0, 50.0),
+              spreadRadius: (active ? 2.0 : 0.0).clamp(0.0, 20.0),
             ),
-
-            // 2. Светлый блик снизу (для эффекта глубины)
+            // 2. БЛИК ГЛУБИНЫ
             BoxShadow(
               color: Colors.white.withOpacity(0.12),
               offset: const Offset(1, 2),
@@ -1320,26 +1319,23 @@ class _MancalaGameState extends State<MancalaGame>
             end: Alignment.bottomRight,
             colors: [
               Colors.black.withOpacity(0.8),
-              Colors.black.withOpacity(0.2),
+              Colors.black.withOpacity(0.2)
             ],
           ),
         ),
-
         child: Center(
           child: Stack(
             alignment: Alignment.center,
             children: [
-              // КАМНИ остаются на фоне
               _buildStones(board[i], false),
-
-              // ЦИФРА с оберткой для пульсации
               if (GameSettings.visualMode != VisualMode.stonesOnly)
                 PulseAnimation(
-                  enabled:
-                      isHighlighted, // Пульсирует ТОЛЬКО когда ход делает ИИ
+                  enabled: isHighlighted,
                   child: AnimatedDefaultTextStyle(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeOutBack,
+                    // ЗАМЕНА: Используем стандартный Curves.linear или Curves.easeInOut
+                    // Они никогда не выдают отрицательных значений в процессе анимации
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeInOut,
                     style: GoogleFonts.cinzel(
                       textStyle: TextStyle(
                         color: isHighlighted
@@ -1348,20 +1344,24 @@ class _MancalaGameState extends State<MancalaGame>
                         fontSize: isHighlighted ? 44 : 28,
                         fontWeight: FontWeight.w900,
                         shadows: [
+                          // 1. Стабильная тень
                           const Shadow(
                             color: Colors.black,
                             blurRadius: 6,
                             offset: Offset(2, 2),
                           ),
+                          // 2. Магическая тень (Защищенная)
                           Shadow(
                             color: isHighlighted
-                                ? Colors.white // Если ИИ
+                                ? Colors.white
                                 : (active
-                                    ? (i < 6
-                                        ? Colors.amber
-                                        : Colors.orange) // Если ход игрока
-                                    : Colors.transparent),
-                            blurRadius: isHighlighted ? 25 : (active ? 12 : 0),
+                                    ? (i < 6 ? Colors.amber : Colors.orange)
+                                    : (i < 6
+                                        ? Colors.amber.withOpacity(0)
+                                        : Colors.orange.withOpacity(0))),
+                            // Убираем сложные вычисления радиуса, оставляем простые double
+                            blurRadius:
+                                isHighlighted ? 25.0 : (active ? 12.0 : 0.0),
                           ),
                         ],
                       ),
