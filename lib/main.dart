@@ -1005,8 +1005,8 @@ class _MancalaGameState extends State<MancalaGame>
           offset: Offset(
               cos(randomAngle) * randomRadius, sin(randomAngle) * randomRadius),
           child: Container(
-            width: 12, // Увеличили на 2 пикселя (было 10)
-            height: 12, // Увеличили на 2 пикселя
+            width: 16, // Увеличили на 2 пикселя (было 10) Размер камней
+            height: 16, // Увеличили на 2 пикселя
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: RadialGradient(
