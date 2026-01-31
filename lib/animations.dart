@@ -459,10 +459,10 @@ class _FlyingStoneState extends State<FlyingStone>
         ][random.nextInt(8)];
 
     // Задержка между камнями для красивого каскадного эффекта
-    int delay = widget.stoneIndex * 80; // 80ms между камнями
+    int delay = widget.stoneIndex * 800; // 100ms между камнями (было 80ms)
 
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 800), // 800ms полёт (было 600ms)
       vsync: this,
     );
 
@@ -613,11 +613,11 @@ class _FlyingStoneState extends State<FlyingStone>
 Настройки анимации полёта камней:
 
 1. СКОРОСТЬ КАМНЕЙ:
-   - Измени duration в FlyingStone (сейчас 600ms)
+   - Измени duration в FlyingStone (сейчас 800ms)
    - Меньше = быстрее полёт
 
 2. ЗАДЕРЖКА МЕЖДУ КАМНЯМИ:
-   - int delay = widget.stoneIndex * 80
+   - int delay = widget.stoneIndex * 100
    - Больше число = больше пауза между камнями
 
 3. ВЫСОТА ДУГИ:
@@ -638,3 +638,73 @@ class _FlyingStoneState extends State<FlyingStone>
 
 Хочешь, чтобы камни в лунках появлялись быстрее? В AnimatedStone уменьши duration с 500 до 200 мс.
 */
+
+/// Виджет для анимации дрожания при приземлении камня
+class ShakeAnimation extends StatefulWidget {
+  final Widget child;
+  final bool trigger;
+  final VoidCallback? onComplete;
+
+  const ShakeAnimation({
+    super.key,
+    required this.child,
+    this.trigger = false,
+    this.onComplete,
+  });
+
+  @override
+  State<ShakeAnimation> createState() => _ShakeAnimationState();
+}
+
+class _ShakeAnimationState extends State<ShakeAnimation>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _animation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 5.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 5.0, end: -5.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -5.0, end: 3.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 3.0, end: -3.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -3.0, end: 0.0), weight: 1),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void didUpdateWidget(ShakeAnimation oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.trigger && !oldWidget.trigger) {
+      _controller.forward(from: 0).then((_) {
+        if (widget.onComplete != null) widget.onComplete!();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(_animation.value, 0),
+          child: child,
+        );
+      },
+      child: widget.child,
+    );
+  }
+}

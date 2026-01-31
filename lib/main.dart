@@ -1507,7 +1507,7 @@ class _MancalaGameState extends State<MancalaGame>
 
     // Ждём завершения всех анимаций полёта
     // Время = базовая задержка + время на последний камень + анимация
-    int totalDelay = (stoneIndex - 1) * 200 +
+    int totalDelay = (stoneIndex - 1) * 100 +
         800 +
         200; // 100ms задержка между камнями + 800ms полёт + 200ms буфер
     await Future.delayed(Duration(milliseconds: totalDelay));
