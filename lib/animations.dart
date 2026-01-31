@@ -459,7 +459,7 @@ class _FlyingStoneState extends State<FlyingStone>
         ][random.nextInt(8)];
 
     // Задержка между камнями для красивого каскадного эффекта
-    int delay = widget.stoneIndex * 800; // 100ms между камнями (было 80ms)
+    int delay = widget.stoneIndex * 500; // 500ms между камнями
 
     _controller = AnimationController(
       duration: const Duration(milliseconds: 800), // 800ms полёт (было 600ms)
@@ -492,6 +492,11 @@ class _FlyingStoneState extends State<FlyingStone>
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
+        // Если контроллер ещё не запущен, не показываем камень
+        if (_controller.status == AnimationStatus.dismissed) {
+          return const SizedBox.shrink();
+        }
+
         double t = _animation.value.clamp(0.0, 1.0);
 
         // Расстояние между точками для расчёта высоты дуги

@@ -1507,9 +1507,9 @@ class _MancalaGameState extends State<MancalaGame>
 
     // Ждём завершения всех анимаций полёта
     // Время = базовая задержка + время на последний камень + анимация
-    int totalDelay = (stoneIndex - 1) * 100 +
+    int totalDelay = (stoneIndex - 1) * 500 +
         800 +
-        200; // 100ms задержка между камнями + 800ms полёт + 200ms буфер
+        300; // 500ms задержка между камнями + 800ms полёт + 300ms буфер
     await Future.delayed(Duration(milliseconds: totalDelay));
 
     // Обновляем доску после завершения всех анимаций
@@ -1518,10 +1518,10 @@ class _MancalaGameState extends State<MancalaGame>
         board[pit]++;
         lastDrop = pit;
         // Запускаем дрожание для каждой лунки, в которую упал камень
-        _shakeTriggers[pit] = true;
+        //  _shakeTriggers[pit] = true;
       }
-      // Принудительно очищаем все анимации на всякий случай
-      captureAnimations.clear();
+      // НЕ очищаем captureAnimations здесь!
+      // Каждая анимация удалится сама через onComplete callback
     });
 
     // Звук приземления камней
@@ -1593,7 +1593,11 @@ class _MancalaGameState extends State<MancalaGame>
       isP1Turn = !isP1Turn;
     }
 
-    setState(() => animating = false);
+    // Финальная очистка всех анимаций на всякий случай
+    setState(() {
+      animating = false;
+      captureAnimations.clear(); // Принудительно очищаем все летящие камни
+    });
 
     // Если ход ИИ
 // Блок в конце метода _move
