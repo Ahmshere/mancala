@@ -722,6 +722,7 @@ class _MancalaGameState extends State<MancalaGame>
   void _animateStoneFlight(int fromIndex, int toIndex, int stoneIndex) {
     if (pitKeys[fromIndex].currentContext == null ||
         pitKeys[toIndex].currentContext == null) {
+      print("⚠️ ПРОПУСК: контекст не найден для $fromIndex -> $toIndex");
       return;
     }
 
@@ -735,15 +736,24 @@ class _MancalaGameState extends State<MancalaGame>
     final Offset endPos = boxTo
         .localToGlobal(Offset(boxTo.size.width / 2, boxTo.size.height / 2));
 
-    late Widget flying;
-    flying = FlyingStone(
+    print("🚀 ЗАПУСК камня #$stoneIndex: $fromIndex -> $toIndex");
+
+    // Создаём ключ для виджета, чтобы точно знать какой камень удалять
+    final stoneKey = GlobalKey();
+
+    final flying = FlyingStone(
+      key: stoneKey,
       start: startPos,
       end: endPos,
       stoneIndex: stoneIndex, // Передаём индекс для задержки
       onComplete: () {
+        print("✅ ЗАВЕРШЕН камень #$stoneIndex");
         if (mounted) {
           setState(() {
-            captureAnimations.remove(flying);
+            // Удаляем камень по ключу, а не по ссылке на виджет
+            captureAnimations.removeWhere((widget) => widget.key == stoneKey);
+            print(
+                "🗑️ УДАЛЕН камень #$stoneIndex из списка (осталось: ${captureAnimations.length})");
           });
         }
       },
@@ -751,6 +761,8 @@ class _MancalaGameState extends State<MancalaGame>
 
     setState(() {
       captureAnimations.add(flying);
+      print(
+          "➕ ДОБАВЛЕН камень #$stoneIndex в список (всего: ${captureAnimations.length})");
     });
   }
 
@@ -1518,7 +1530,7 @@ class _MancalaGameState extends State<MancalaGame>
         board[pit]++;
         lastDrop = pit;
         // Запускаем дрожание для каждой лунки, в которую упал камень
-        //  _shakeTriggers[pit] = true;
+        _shakeTriggers[pit] = true;
       }
       // НЕ очищаем captureAnimations здесь!
       // Каждая анимация удалится сама через onComplete callback
@@ -1593,10 +1605,10 @@ class _MancalaGameState extends State<MancalaGame>
       isP1Turn = !isP1Turn;
     }
 
-    // Финальная очистка всех анимаций на всякий случай
+    // Финальная очистка флагов
     setState(() {
       animating = false;
-      captureAnimations.clear(); // Принудительно очищаем все летящие камни
+      // НЕ очищаем captureAnimations! Каждая анимация удалится сама через onComplete
     });
 
     // Если ход ИИ

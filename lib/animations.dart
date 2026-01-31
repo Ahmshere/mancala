@@ -443,6 +443,8 @@ class _FlyingStoneState extends State<FlyingStone>
   void initState() {
     super.initState();
 
+    print("🎬 FlyingStone #${widget.stoneIndex} initState");
+
     // Генерируем случайный цвет для каждого камня
     final random =
         Random(widget.stoneIndex + DateTime.now().millisecondsSinceEpoch);
@@ -471,12 +473,25 @@ class _FlyingStoneState extends State<FlyingStone>
       curve: Curves.easeInOutCubic,
     );
 
+    print("⏰ FlyingStone #${widget.stoneIndex} ждёт $delay ms перед стартом");
+
     // Запускаем анимацию с задержкой
     Future.delayed(Duration(milliseconds: delay), () {
+      print(
+          "▶️ FlyingStone #${widget.stoneIndex} начинает полёт (mounted: $mounted)");
       if (mounted) {
         _controller.forward().then((_) {
-          if (mounted) widget.onComplete();
+          print(
+              "🏁 FlyingStone #${widget.stoneIndex} завершил анимацию (mounted: $mounted)");
+          if (mounted) {
+            widget.onComplete();
+          }
         });
+      } else {
+        // Если виджет размонтирован во время задержки, всё равно вызываем callback
+        print(
+            "❌ FlyingStone #${widget.stoneIndex} был размонтирован во время задержки!");
+        widget.onComplete();
       }
     });
   }
