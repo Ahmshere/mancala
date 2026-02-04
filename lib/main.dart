@@ -399,6 +399,10 @@ class _MainMenuState extends State<MainMenu>
   }
 
   Widget _buildDifficultyChips() {
+    // 1. Сначала получаем текущий словарь переводов (как в начале build)
+    var txt = GameSettings.labels[GameSettings.lang] ??
+        GameSettings.labels[Language.en]!;
+
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -407,8 +411,10 @@ class _MainMenuState extends State<MainMenu>
         mainAxisSize: MainAxisSize.min,
         children: Difficulty.values
             .map((d) => ChoiceChip(
-                  label: Text(d.name.toUpperCase(),
+                  // 2. ЗАМЕНЯЕМ ЭТУ СТРОКУ:
+                  label: Text(txt[d.name] ?? d.name.toUpperCase(),
                       style: const TextStyle(fontSize: 12)),
+
                   selected: GameSettings.difficulty == d,
                   onSelected: (s) =>
                       setState(() => GameSettings.difficulty = d),
@@ -1046,8 +1052,8 @@ class _MancalaGameState extends State<MancalaGame>
           offset: Offset(
               cos(randomAngle) * randomRadius, sin(randomAngle) * randomRadius),
           child: Container(
-            width: 16, // Увеличили на 2 пикселя (было 10) Размер камней
-            height: 16, // Увеличили на 2 пикселя
+            width: 18, // Увеличили на 2 пикселя (было 10) Размер камней
+            height: 18, // Увеличили на 2 пикселя
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: RadialGradient(
@@ -1394,7 +1400,9 @@ class _MancalaGameState extends State<MancalaGame>
                               : (i < 6
                                   ? Colors.amber[100]
                                   : Colors.orange[100]),
-                          fontSize: isHighlighted ? 44 : 28,
+                          fontSize: isHighlighted
+                              ? 44
+                              : 30, //размер шрифта цифр в лунках
                           fontWeight: FontWeight.w900,
                           shadows: [
                             // 1. Стабильная тень

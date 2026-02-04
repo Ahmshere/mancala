@@ -84,6 +84,9 @@ Try to make your last stone land in your Kalah to earn an extra turn!
       'volume': 'Volume',
       'exit_confirm_title': 'Leave Game?',
       'exit_confirm_desc': 'Are you sure you want to exit?',
+      'easy': 'EASY',
+      'medium': 'MEDIUM',
+      'hard': 'HARD',
     },
     Language.ru: {
       'title': 'МАНКАЛА',
@@ -138,6 +141,9 @@ Try to make your last stone land in your Kalah to earn an extra turn!
       'volume': 'Громкость',
       'exit_confirm_title': 'Выйти из игры?',
       'exit_confirm_desc': 'Вы уверены? Прогресс будет потерян.',
+      'easy': 'ЛЕГКО',
+      'medium': 'СРЕДНЕ',
+      'hard': 'СЛОЖНО',
     },
     Language.de: {
       'title': 'MANCALA',
@@ -202,6 +208,9 @@ Versuche, den letzten Stein in deine Kalah zu legen, um einen zusätzlichen Zug 
       'volume': 'Lautstärke',
       'exit_confirm_title': 'Spiel verlassen?',
       'exit_confirm_desc': 'Bist du sicher? Fortschritt geht verloren.',
+      'easy': 'LEICHT',
+      'medium': 'MITTEL',
+      'hard': 'SCHWER',
     },
   };
 }
