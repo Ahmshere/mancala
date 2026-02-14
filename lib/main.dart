@@ -1690,8 +1690,48 @@ class _MancalaGameState extends State<MancalaGame>
     HapticFeedback.lightImpact(); // Добавим тактильный отклик
   }
 
-// Основная функция хода ИИ
   void _aiMove() async {
+    if (!isAiThinking && !animating) {
+      setState(() => isAiThinking = true);
+      await Future.delayed(const Duration(milliseconds: 1000));
+
+      int bestEval = -1000000;
+      List<int> bestMoves = []; // Создаем список для хранения равноценных ходов
+
+      // Настройка глубины в зависимости от выбранной сложности
+      int depth = 4;
+      if (GameSettings.difficulty == Difficulty.medium) depth = 5;
+      if (GameSettings.difficulty == Difficulty.hard) depth = 8;
+
+      // Проверяем все возможные ходы ИИ (лунки 7-12)
+      for (int i = 7; i < 13; i++) {
+        if (board[i] > 0) {
+          var result = _simulateMoveDetailed(board, i);
+          int eval = _minimax(
+              result.board, depth, result.extraTurn, -1000000, 1000000);
+
+          if (eval > bestEval) {
+            bestEval = eval;
+            bestMoves = [i]; // Нашли ход лучше — начинаем список заново
+          } else if (eval == bestEval) {
+            bestMoves.add(i); // Ход такой же крутой — добавляем в варианты
+          }
+        }
+      }
+
+      // Если нашли хотя бы один ход
+      if (bestMoves.isNotEmpty) {
+        // ВЫБИРАЕМ СЛУЧАЙНЫЙ ИЗ ЛУЧШИХ
+        int finalMove = bestMoves[Random().nextInt(bestMoves.length)];
+        _move(finalMove);
+      }
+
+      if (mounted) setState(() => isAiThinking = false);
+    }
+  }
+
+// Основная функция хода ИИ
+  /* void _aiMove() async {
     if (!mounted || isP1Turn || animating) return;
 
     setState(() {
@@ -1702,7 +1742,7 @@ class _MancalaGameState extends State<MancalaGame>
     int maxDepth;
     switch (GameSettings.difficulty) {
       case Difficulty.easy:
-        maxDepth = 1;
+        maxDepth = 2;
         break;
       case Difficulty.medium:
         maxDepth = 4;
@@ -1764,7 +1804,7 @@ class _MancalaGameState extends State<MancalaGame>
       }
     }
   }
-
+*/
 // сложность ии
 // Используем Record (новое в Dart), чтобы вернуть два значения сразу
   ({List<int> board, bool extraTurn}) _simulateMoveDetailed(
@@ -1848,6 +1888,7 @@ int _evaluatePosition(List<int> b) {
 }
 */
 // Функция оценки (душа уровня Hard)
+/*
   int _evaluatePosition(List<int> b) {
     // Добавляем элемент случайности в зависимости от сложности
     int randomness = 0;
@@ -1890,6 +1931,31 @@ int _evaluatePosition(List<int> b) {
 
     return score;
   }
+*/
+  int _evaluatePosition(List<int> b) {
+    // 1. Разница в Калахах
+    int score = (b[13] - b[6]) * 50;
+
+    // 2. БОНУС за доп. ходы
+    for (int i = 7; i < 13; i++) {
+      if (b[i] > 0 && (i + b[i]) % 14 == 13) {
+        score += 40;
+      }
+    }
+
+    // 3. Безопасность камней (близость к дому)
+    for (int i = 7; i < 13; i++) {
+      score += (b[i] * (i - 6));
+    }
+
+    // 4. ЗАХВАТЫ
+    for (int i = 0; i < 6; i++) {
+      if (b[i] == 0 && b[12 - i] > 0) score -= (b[12 - i] * 15);
+      if (b[12 - i] == 0 && b[i] > 0) score += (b[i] * 12);
+    }
+
+    return score;
+  }
 
   // Алгоритм Minimax с Альфа-Бето отсечением
 // Оптимизированный Minimax с Alpha-Beta отсечением
@@ -1909,7 +1975,8 @@ int _evaluatePosition(List<int> b) {
         // Если доп. ход, глубина уменьшается медленнее (или не уменьшается)
         int eval = _minimax(
             result.board,
-            result.extraTurn ? depth - 1 : depth - 1,
+            depth - 1,
+            //result.extraTurn ? depth - 1 : depth - 1,
             result.extraTurn,
             alpha,
             beta);
