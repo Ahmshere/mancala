@@ -1939,15 +1939,23 @@ int _evaluatePosition(List<int> b) {
     // 2. БОНУС за доп. ходы
     for (int i = 7; i < 13; i++) {
       if (b[i] > 0 && (i + b[i]) % 14 == 13) {
-        score += 40;
+        // Поднимаем с 40 до 150-200.
+        // Теперь это ценнее, чем разница в 3-4 камня.
+        score += 220;
       }
     }
-
+/*
     // 3. Безопасность камней (близость к дому)
     for (int i = 7; i < 13; i++) {
       score += (b[i] * (i - 6));
     }
-
+*/
+// 3. Защита: штрафуем за пустые лунки на своей стороне (риск захвата)
+    for (int i = 7; i < 13; i++) {
+      if (b[i] == 0 && b[12 - i] > 0) {
+        score -= 100; // ИИ будет стараться закрывать дыры
+      }
+    }
     // 4. ЗАХВАТЫ
     for (int i = 0; i < 6; i++) {
       if (b[i] == 0 && b[12 - i] > 0) score -= (b[12 - i] * 15);
@@ -1975,7 +1983,9 @@ int _evaluatePosition(List<int> b) {
         // Если доп. ход, глубина уменьшается медленнее (или не уменьшается)
         int eval = _minimax(
             result.board,
-            depth - 1,
+            result.extraTurn
+                ? depth
+                : depth - 1, // если тормозит то возвращаем depth - 1,
             //result.extraTurn ? depth - 1 : depth - 1,
             result.extraTurn,
             alpha,
