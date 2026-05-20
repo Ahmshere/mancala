@@ -13,24 +13,25 @@ import 'dart:async';
 import 'stats_screen.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'admob_manager.dart';
 // import 'space_background.dart';
+import 'dart:io';
+import 'dart:math';
 
 // my_email: prudnikov.michael@aol.com
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.landscapeLeft,
-    DeviceOrientation.landscapeRight,
-  ]);
-  await AudioManager().init();
 
+  // 🆕 РАЗРЕШАЕМ ВСЕ ОРИЕНТАЦИИ (для главного меню)
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
+
+  await AudioManager().init();
+  await AdMobManager().initialize();
+
   runApp(const MancalaApp());
 }
 
@@ -45,7 +46,130 @@ class MancalaApp extends StatelessWidget {
     );
   }
 }
+class _PulsingIcon extends StatefulWidget {
+  final IconData icon;
+  final Color color;
+  final double size;
 
+  const _PulsingIcon({
+    required this.icon,
+    required this.color,
+    required this.size,
+  });
+
+  @override
+  State<_PulsingIcon> createState() => _PulsingIconState();
+}
+
+class _PulsingIconState extends State<_PulsingIcon>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final scale = 1.0 + (_controller.value * 0.2);
+        return Transform.scale(
+          scale: scale,
+          child: Icon(
+            widget.icon,
+            color: widget.color,
+            size: widget.size,
+            shadows: [
+              Shadow(
+                color: widget.color.withOpacity(0.8),
+                blurRadius: 20 * _controller.value,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// 🆕 ВИДЖЕТ АНИМИРОВАННОГО СЧЁТА
+class _ScoreRow extends StatelessWidget {
+  final String label;
+  final int score;
+  final Color color;
+  final int delay;
+
+  const _ScoreRow({
+    required this.label,
+    required this.score,
+    required this.color,
+    required this.delay,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 400),
+      tween: Tween(begin: 0.0, end: 1.0),
+      curve: Curves.easeOut,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset((1 - value) * 50, 0),
+          child: Opacity(
+            opacity: value,
+            child: child,
+          ),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Левая часть (Label)
+            Flexible( // 🆕 Вместо Expanded
+              flex: 2,
+              child: Text(
+                '$label:',
+                style: TextStyle(fontSize: 16, color: color),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 10),
+            // Правая часть (Score)
+            TweenAnimationBuilder<int>(
+              duration: const Duration(milliseconds: 800),
+              tween: IntTween(begin: 0, end: score),
+              builder: (context, value, child) {
+                return Text(
+                  '$value',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 /* ===================== ГЛАВНОЕ МЕНЮ ===================== */
 
 class MainMenu extends StatefulWidget {
@@ -664,6 +788,8 @@ class MancalaGame extends StatefulWidget {
 // Основа
 class _MancalaGameState extends State<MancalaGame>
     with TickerProviderStateMixin, WidgetsBindingObserver {
+  // СЧЕТЧИК ИГР (static чтобы сохранялся между играми)
+  static int _gamesCompleted = 0;
   List<int> board = List.filled(14, 4);
   // late List<Star> _stars;
   // late AnimationController _starController;
@@ -873,6 +999,12 @@ class _MancalaGameState extends State<MancalaGame>
 
   @override
   void dispose() {
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+
     WidgetsBinding.instance.removeObserver(this);
     // _starController.dispose();
     _stoneAnimController.dispose();
@@ -888,117 +1020,194 @@ class _MancalaGameState extends State<MancalaGame>
   }
 
   void _showGameOverDialog() {
-    void saveGame(GameRecord newRecord) async {
-      final prefs = await SharedPreferences.getInstance();
-      List<String> history = prefs.getStringList('game_history') ?? [];
-      history.insert(0, json.encode(newRecord.toJson())); // Добавляем в начало
-      await prefs.setStringList('game_history', history);
-    }
-
     var txt = GameSettings.labels[GameSettings.lang] ??
         GameSettings.labels[Language.en]!;
 
-    // Берем только то, что уже лежит в Калахах
     int p1Score = board[6];
     int p2Score = board[13];
     _saveFinalStatsManual(p1Score, p2Score);
-    // _saveFinalStatsManual(p1Score, p2Score);
-    // Очищаем лунки визуально для красоты, но НЕ прибавляем их к счету
+
     for (int i = 0; i < 14; i++) {
       if (i != 6 && i != 13) board[i] = 0;
     }
 
-    setState(() {}); // Обновляем доску, чтобы она стала пустой
+    setState(() {});
 
-    // Определяем победителя на основе текущих Калахов
     String winner;
+    IconData winIcon;
+    Color winColor;
+
     if (p1Score > p2Score) {
       AudioManager().playSfx(AudioManager.winSound);
       winner = txt['p1_wins']!;
+      winIcon = Icons.emoji_events; // 🏆
+      winColor = Colors.amber;
     } else if (p2Score > p1Score) {
       AudioManager().playSfx(AudioManager.loseSound);
       winner = widget.mode == GameMode.ai ? txt['ai_wins']! : txt['p2_wins']!;
+      winIcon = Icons.computer; // 🤖
+      winColor = Colors.deepOrange;
     } else {
       AudioManager().playSfx(AudioManager.winSound);
       winner = txt['draw']!;
+      winIcon = Icons.handshake; // 🤝
+      winColor = Colors.blueAccent;
     }
+
     _magicRotationController.repeat();
-    // ... далее код вызова самого Dialog
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => Stack(
         children: [
-          // 1. Слой "Магического вихря"
+          // 1. Конфетти
           IgnorePointer(
             child: Center(
               child: const StoneConfetti(),
             ),
           ),
 
-          // 2. Слой самого диалога
-          AlertDialog(
-            backgroundColor: const Color(0xFF3E2723).withOpacity(0.95),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: Row(
-              children: [
-                const Icon(Icons.emoji_events, color: Colors.amber, size: 32),
-                const SizedBox(width: 10),
-                Text(txt['game_over']!,
-                    style: const TextStyle(color: Colors.amber)),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  winner,
-                  style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white),
-                  textAlign: TextAlign.center,
+          // 2. Диалог с WOW анимацией
+          TweenAnimationBuilder<double>(
+            duration: const Duration(milliseconds: 800),
+            tween: Tween(begin: 0.0, end: 1.0),
+            curve: Curves.elasticOut,
+            builder: (context, value, child) {
+              return Transform.scale(
+                scale: value,
+                child: Transform.rotate(
+                  angle: (1 - value) * 0.3, // Поворот при появлении
+                  child: child,
                 ),
-                const SizedBox(height: 20),
-                Text('${txt['p1']}: $p1Score',
-                    style: const TextStyle(
-                        fontSize: 18, color: Colors.greenAccent)),
-                // Используем ai_short или ai_label, как мы исправляли ранее
-                Text(
-                    '${widget.mode == GameMode.ai ? (txt['ai_short'] ?? txt['ai']) : txt['p2']}: $p2Score',
-                    style: const TextStyle(
-                        fontSize: 18, color: Colors.orangeAccent)),
+              );
+            },
+            child: AlertDialog(
+              backgroundColor: const Color(0xFF3E2723).withOpacity(0.95),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(color: winColor, width: 3),
+              ),
+              title: _PulsingIcon(
+                icon: winIcon,
+                color: winColor,
+                size: 48,
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Анимированный текст победителя
+                  TweenAnimationBuilder<double>(
+                    duration: const Duration(milliseconds: 600),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    curve: Curves.bounceOut,
+                    builder: (context, value, child) {
+                      return Transform.scale(
+                        scale: 0.8 + (value * 0.2),
+                        child: Opacity(
+                          opacity: value,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Text(
+                      winner,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: winColor,
+                        shadows: [
+                          Shadow(
+                            color: winColor.withOpacity(0.5),
+                            blurRadius: 20,
+                          ),
+                        ],
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2, //  Максимум 2 строки
+                      overflow: TextOverflow.ellipsis, //  Троеточие если не влезает
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  // Счёт
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 250),
+                    child: Column(
+                      children: [
+                        _ScoreRow(
+                          label: txt['p1']!,
+                          score: p1Score,
+                          color: Colors.greenAccent,
+                          delay: 300,
+                        ),
+                        _ScoreRow(
+                          label: widget.mode == GameMode.ai
+                              ? (txt['ai_short'] ?? txt['ai']!)
+                              : txt['p2']!,
+                          score: p2Score,
+                          color: Colors.orangeAccent,
+                          delay: 500,
+                        ),
+                      ],
+                    ),
+                  ),
+                ], // ⬅️ ЗАКРЫВАЮЩАЯ СКОБКА для children Column
+              ), // ⬅️ ЗАКРЫВАЮЩАЯ СКОБКА для content
+              actions: [ // ⬅️ ЗДЕСЬ actions НА ПРАВИЛЬНОМ УРОВНЕ!
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _gamesCompleted++;
+
+                    if (_gamesCompleted % 2 == 0) {
+                      AdMobManager().showInterstitialAd(onAdClosed: () {
+                        if (mounted) {
+                          setState(() {
+                            board = List.filled(14, 4);
+                            board[6] = 0;
+                            board[13] = 0;
+                            isP1Turn = true;
+                            startTime = DateTime.now();
+                          });
+                        }
+                      });
+                    } else {
+                      if (mounted) {
+                        setState(() {
+                          board = List.filled(14, 4);
+                          board[6] = 0;
+                          board[13] = 0;
+                          isP1Turn = true;
+                          startTime = DateTime.now();
+                        });
+                      }
+                    }
+                  },
+                  child: Text(txt['play_again']!,
+                      style: const TextStyle(color: Colors.amber, fontSize: 16)),
+                ),
+                TextButton(
+                  onPressed: () {
+                    _gamesCompleted++;
+
+                    if (_gamesCompleted % 2 == 0) {
+                      AdMobManager().showInterstitialAd(onAdClosed: () {
+                        Navigator.pop(context);
+                        Navigator.pop(context);
+                      });
+                    } else {
+                      Navigator.pop(context);
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: Text(txt['menu']!,
+                      style: const TextStyle(color: Colors.white70, fontSize: 16)),
+                ),
               ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  setState(() {
-                    board = List.filled(14, 4);
-                    board[6] = 0;
-                    board[13] = 0;
-                    isP1Turn = true;
-                  });
-                },
-                child: Text(txt['play_again']!,
-                    style: const TextStyle(color: Colors.amber)),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context); // Закрыть диалог
-                  Navigator.pop(context); // Выйти в меню
-                },
-                child: Text(txt['menu']!,
-                    style: const TextStyle(color: Colors.white70)),
-              ),
-            ],
-          ),
+            ), // ⬅️ ЗАКРЫВАЮЩАЯ СКОБКА для AlertDialog
+          ), // ⬅️ ЗАКРЫВАЮЩАЯ СКОБКА для child TweenAnimationBuilder
         ],
       ),
-    );
-  }
+    );}
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -1197,76 +1406,103 @@ class _MancalaGameState extends State<MancalaGame>
                               color: Colors.amber, size: 35),
                           onPressed: _openRules,
                         ),
+
                       ),
                       // кнопка вкл/выкл фон музыки
                       // Кнопки управления (Музыка + Отмена хода)
-                      Positioned(
-                        top: 5,
-                        left: 5,
-                        child: Row(
-                          children: [
-                            // Твоя кнопка музыки
-                            IconButton(
-                              icon: Icon(
-                                GameSettings.isMusicOn
-                                    ? Icons.music_note
-                                    : Icons.music_off,
-                                color: Colors.amber,
-                                size: 35,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  GameSettings.isMusicOn =
-                                      !GameSettings.isMusicOn;
-                                  if (GameSettings.isMusicOn) {
-                                    AudioManager().playMusic();
-                                  } else {
-                                    AudioManager().stopMusic();
-                                  }
-                                });
-                              },
-                            ),
-                            const SizedBox(
-                                width:
-                                    10), // Небольшой отступ между музыкой и отменой
+    Positioned(
+    top: 5,
+    left: 5,
+    child: LayoutBuilder(
+    builder: (context, constraints) {
+    // Определяем ориентацию
+    final isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
+    final buttonSize = isPortrait ? 24.0 : 28.0; // Меньше в портрете
 
-                            // Кнопка ОТМЕНЫ хода (появляется только когда есть что отменять)
-                            if (_canUndo &&
-                                !animating &&
-                                !isAiThinking &&
-                                aiSelectedPit == null)
-                              IconButton(
-                                icon: const Icon(Icons.undo,
-                                    color: Colors.amber, size: 35),
-                                onPressed: _undoMove,
-                              ),
-                            /*  if (_canUndo && !animating && !isAiThinking) 
-        IconButton(
-          icon: const Icon(Icons.undo, color: Colors.amber, size: 35),
-          tooltip: 'Undo',
-          onPressed: _undoMove,
-        ),*/
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+    return SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    child: Row(
+    children: [
+    // Кнопка музыки
+    IconButton(
+    icon: Icon(
+    GameSettings.isMusicOn
+    ? Icons.music_note
+        : Icons.music_off,
+    color: Colors.amber,
+    size: buttonSize, // 🆕 Адаптивный размер
+    ),
+    padding: EdgeInsets.zero,
+    constraints: const BoxConstraints(),
+    onPressed: () {
+    setState(() {
+    GameSettings.isMusicOn = !GameSettings.isMusicOn;
+    if (GameSettings.isMusicOn) {
+    AudioManager().playMusic();
+    } else {
+    AudioManager().stopMusic();
+    }
+    });
+    },
+    ),
+    const SizedBox(width: 6), // 🆕 Уменьшили отступ
 
-            // СЛОЙ 2: АНИМАЦИИ ПОЛЕТА КАМНЕЙ
-            // Этот список разворачивается поверх всей доски
-            ...captureAnimations,
+    // Кнопка ОТМЕНЫ хода
+    if (_canUndo &&
+    !animating &&
+    !isAiThinking &&
+    aiSelectedPit == null)
+    IconButton(
+    icon: Icon(Icons.undo,
+    color: Colors.amber,
+    size: buttonSize), // 🆕 Адаптивный размер
+    padding: EdgeInsets.zero,
+    constraints: const BoxConstraints(),
+    onPressed: _undoMove,
+    ),
 
-            // СЛОЙ 3: КОНФЕТТИ (Появляется только в конце)
-            // Мы его уже прописывали в _showGameOverDialog, но можно продублировать и здесь,
-            // если хочешь управлять им через переменную состояния.
-          ],
-        ),
-      ),
+    const SizedBox(width: 6), // 🆕 Уменьшили отступ
+
+    // Кнопка подсказки
+    if (widget.mode == GameMode.ai &&
+    isP1Turn &&
+    !animating &&
+    AdMobManager().isRewardedAdReady)
+    IconButton(
+    icon: Icon(Icons.lightbulb_outline,
+    color: Colors.amber,
+    size: buttonSize), // 🆕 Адаптивный размер
+    padding: EdgeInsets.zero,
+    constraints: const BoxConstraints(),
+    tooltip: 'Hint (watch ad)',
+    onPressed: () {
+    AdMobManager().showRewardedAd(
+    onRewardEarned: (earned) {
+    if (earned && mounted) {
+    _showAIHint();
+    }
+    },
+    );
+    },
+    ),
+    ],
+    ),
+    );
+    },
+    ),
+    ),
+    ],
+    ),
+    ),
+    ),),
+
+    ...captureAnimations,
+    ],
+    ),
+    ),
     );
   }
+
 
   // ИЩИ ЭТОТ МЕТОД В КОНЦЕ ФАЙЛА
   Widget _buildBoard() {
@@ -1314,6 +1550,71 @@ class _MancalaGameState extends State<MancalaGame>
     );
   }
 
+  void _showAIHint() {
+    var txt = GameSettings.labels[GameSettings.lang] ??
+        GameSettings.labels[Language.en]!;
+
+    // Используем ту же логику, что и AI
+    int bestMove = -1;
+    int bestValue = -20000;
+    int depth = GameSettings.difficulty == Difficulty.easy ? 2 :
+    (GameSettings.difficulty == Difficulty.medium ? 4 : 6);
+
+    for (int i = 0; i < 6; i++) {
+      if (board[i] > 0) {
+        var result = _simulateMoveDetailed(board, i);
+        int moveValue = _minimax(
+            result.board, depth, result.extraTurn, -20000, 20000);
+
+        if (moveValue > bestValue) {
+          bestValue = moveValue;
+          bestMove = i;
+        }
+      }
+    }
+
+    if (bestMove != -1) {
+      // Подсвечиваем лучший ход на 3 секунды
+      setState(() => aiSelectedPit = bestMove);
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          backgroundColor: const Color(0xFF3E2723).withOpacity(0.95),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.lightbulb, color: Colors.amber),
+              const SizedBox(width: 10),
+              Text('AI Hint',
+                  style: const TextStyle(color: Colors.amber)),
+            ],
+          ),
+          content: Text(
+            'Try moving from pit ${bestMove + 1}!\n\n'
+                'This is the strongest move AI would make.',
+            style: const TextStyle(color: Colors.white, fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Future.delayed(const Duration(seconds: 1), () {
+                  if (mounted) {
+                    setState(() => aiSelectedPit = null);
+                  }
+                });
+              },
+              child: const Text('Got it!',
+                  style: TextStyle(color: Colors.amber)),
+            ),
+          ],
+        ),
+      );
+    }
+  }
   /*
   В методе _buildPit(int i):
     Размер лунки: width: 65, height: 65 (в контейнере внутри метода).
@@ -1730,81 +2031,7 @@ class _MancalaGameState extends State<MancalaGame>
     }
   }
 
-// Основная функция хода ИИ
-  /* void _aiMove() async {
-    if (!mounted || isP1Turn || animating) return;
 
-    setState(() {
-      isAiThinking = true;
-      aiSelectedPit = null;
-    });
-
-    int maxDepth;
-    switch (GameSettings.difficulty) {
-      case Difficulty.easy:
-        maxDepth = 2;
-        break;
-      case Difficulty.medium:
-        maxDepth = 4;
-        break;
-      case Difficulty.hard:
-        maxDepth = 8;
-        break;
-      default:
-        maxDepth = 2;
-    }
-
-    // Имитация раздумий (пока мигает текст сверху)
-    await Future.delayed(const Duration(milliseconds: 1000));
-
-    int bestMove = -1;
-    int bestValue = -20000;
-    List<int> currentBoard = List.from(board);
-
-    for (int i = 7; i < 13; i++) {
-      if (currentBoard[i] > 0) {
-        var result = _simulateMoveDetailed(currentBoard, i);
-        int moveValue =
-            _minimax(result.board, maxDepth, result.extraTurn, -20000, 20000);
-
-        if (moveValue > bestValue) {
-          bestValue = moveValue;
-          bestMove = i;
-        }
-      }
-    }
-
-    if (bestMove != -1 && mounted) {
-      // ИИ выбрал лунку
-      setState(() {
-        isAiThinking = false;
-        aiSelectedPit =
-            bestMove; // В этот момент AnimatedDefaultTextStyle в buildPit сработает!
-      });
-
-      // Даем игроку время увидеть увеличенную цифру и белое свечение
-      await Future.delayed(const Duration(milliseconds: 1000));
-
-      if (!mounted) return;
-
-      // Убираем подсветку ПЕРЕД началом движения камней
-      setState(() {
-        aiSelectedPit = null;
-      });
-
-      _move(bestMove); // Запускаем анимацию разлета камней
-
-      // Ждем завершения хода, чтобы убрать подсветку последней лунки (желтый ободок)
-      await Future.delayed(const Duration(milliseconds: 2000));
-
-      if (mounted) {
-        setState(() {
-          lastDrop = -1;
-        });
-      }
-    }
-  }
-*/
 // сложность ии
 // Используем Record (новое в Dart), чтобы вернуть два значения сразу
   ({List<int> board, bool extraTurn}) _simulateMoveDetailed(
@@ -1845,93 +2072,6 @@ class _MancalaGameState extends State<MancalaGame>
     return (board: newBoard, extraTurn: extraTurn);
   }
 
-/*
-int _evaluatePosition(List<int> b) {
-  // 1. Базовый счет (разница в Калахах) - вес 15
-  int score = (b[13] - b[6]) * 15;
-
-  // 2. Удержание камней на своей стороне - вес 2
-  // Это мешает игре закончиться слишком рано, если ИИ выигрывает по позиции
-  int aiSide = 0;
-  int playerSide = 0;
-  for (int i = 7; i < 13; i++) aiSide += b[i];
-  for (int i = 0; i < 6; i++) playerSide += b[i];
-  score += (aiSide - playerSide) * 2;
-
-  // 3. БОНУС ЗА БЛИЗОСТЬ К ПОБЕДЕ
-  // Если у ИИ уже больше половины всех камней ( > 24), он должен играть максимально агрессивно
-  if (b[13] > 24) score += 100;
-
-  // 4. ОХОТА ЗА ЗАХВАТОМ (Capture)
-  // Проверяем, может ли ИИ в один ход сделать захват
-  for (int i = 7; i < 13; i++) {
-    if (b[i] == 0) {
-      int opposite = 12 - i;
-      if (b[opposite] > 0) {
-        score += (b[opposite] * 5); // Очень высокий приоритет захвата
-      }
-    }
-  }
-
-  // 5. ЗАЩИТА (Anti-Capture)
-  // ИИ должен бояться оставлять свои полные лунки напротив твоих пустых
-  for (int i = 0; i < 6; i++) {
-    if (b[i] == 0) {
-      int opposite = 12 - i;
-      if (b[opposite] > 0) {
-        score -= (b[opposite] * 6); // Штраф еще выше, чем бонус за захват
-      }
-    }
-  }
-
-  return score;
-}
-*/
-// Функция оценки (душа уровня Hard)
-/*
-  int _evaluatePosition(List<int> b) {
-    // Добавляем элемент случайности в зависимости от сложности
-    int randomness = 0;
-    if (GameSettings.difficulty == Difficulty.easy) {
-      // Ошибка от -50 до +50 (всего диапазон 101 число)
-      randomness = Random().nextInt(80) - 5; // Ошибка до 50 очков
-    } else if (GameSettings.difficulty == Difficulty.medium) {
-      // Ошибка от -20 до +20 (всего диапазон 41 число)
-      randomness = Random().nextInt(30) - 2;
-    }
-    // 1. Разница в Калахах (основной вес)
-    int score = (b[13] - b[6]) * 50 +
-        randomness; /* Чтобы он стал «глупее», в твоем методе _evaluatePosition просто поменяй множитель в первой строке: int score = (b[13] - b[6]) * 10; (вместо 100). Тогда он будет меньше дорожить камнями в Калахе.*/
-
-    // 2. БОНУС за возможность сделать доп. ход прямо сейчас
-    // ИИ должен "обожать" цепочки ходов
-    for (int i = 7; i < 13; i++) {
-      if (b[i] > 0 && (i + b[i]) % 14 == 13) {
-        score += 40; // Даем высокий приоритет доп. ходам
-      }
-    }
-
-    // 3. БОНУС за близость к своей Калахе
-    // Чем ближе камни к дому, тем они безопаснее
-    for (int i = 7; i < 13; i++) {
-      score += (b[i] * (i - 6));
-    }
-
-    // 4. ЗАХВАТЫ (Охота и Защита)
-    for (int i = 0; i < 6; i++) {
-      // Если у игрока пустая лунка и напротив есть камни ИИ
-      if (b[i] == 0 && b[12 - i] > 0) {
-        score -= (b[12 - i] * 15); // Штраф: ИИ рискует потерять камни
-      }
-      // Если у ИИ пустая лунка и напротив есть камни игрока
-      if (b[12 - i] == 0 && b[i] > 0) {
-        score += (b[i] * 12); // Бонус: ИИ может захватить
-      }
-    }
-
-    return score;
-  }
-*/
   int _evaluatePosition(List<int> b) {
     // 1. Разница в Калахах
     int score = (b[13] - b[6]) * 50;
@@ -1956,11 +2096,19 @@ int _evaluatePosition(List<int> b) {
         score -= 100; // ИИ будет стараться закрывать дыры
       }
     }
-    // 4. ЗАХВАТЫ
+
+    // 4. Захват: поощряем возможность захватить камни врага
+  for (int i = 7; i < 13; i++) {
+    if (b[i] == 0 && b[12 - i] > 0) {
+       // Если мы можем следующим ходом попасть сюда - это круто
+       // (но это уже считает сам минимакс через дерево ходов)
+    }
+  }
+   /* // 4. ЗАХВАТЫ
     for (int i = 0; i < 6; i++) {
       if (b[i] == 0 && b[12 - i] > 0) score -= (b[12 - i] * 15);
       if (b[12 - i] == 0 && b[i] > 0) score += (b[i] * 12);
-    }
+    }*/
 
     return score;
   }
