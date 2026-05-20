@@ -976,6 +976,11 @@ class _MancalaGameState extends State<MancalaGame>
   @override
   void initState() {
     super.initState();
+    // 🆕 ПРИНУДИТЕЛЬНО БЛОКИРУЕМ ЛАНДШАФТ СРАЗУ ПРИ СТАРТЕ ИГРЫ
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
     // _stars = Star.generate(50);
     /*_starController = AnimationController(
       vsync: this,
