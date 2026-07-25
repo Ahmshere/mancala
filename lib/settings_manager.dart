@@ -12,7 +12,7 @@ class GameSettings {
   static Language lang = Language.en;
   static Difficulty difficulty = Difficulty.medium;
   static VisualMode visualMode = VisualMode.stonesAndNumbers;
-  static const String appVersion = "1.1.0"; // Версия тут
+  static const String appVersion = "1.1.1"; // Версия тут
 
   static bool isSoundOn = true;
   static bool isMusicOn = true;

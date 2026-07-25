@@ -16,7 +16,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'admob_manager.dart';
 // import 'space_background.dart';
 import 'dart:io';
-import 'dart:math';
 
 // my_email: prudnikov.michael@aol.com
 void main() async {
@@ -290,7 +289,7 @@ class _MainMenuState extends State<MainMenu>
           return AlertDialog(
             backgroundColor: const Color(0xFF3E2723),
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
             title: Text(
               txt['settings'] ?? 'Settings',
               style: const TextStyle(
@@ -305,7 +304,7 @@ class _MainMenuState extends State<MainMenu>
                   // --- СЕКЦИЯ ЯЗЫКА ---
                   Text(txt['language'] ?? 'Language',
                       style:
-                          const TextStyle(color: Colors.white70, fontSize: 14)),
+                      const TextStyle(color: Colors.white70, fontSize: 14)),
                   const SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -371,11 +370,11 @@ class _MainMenuState extends State<MainMenu>
                   onPressed: () {
                     Navigator.pop(context);
                     setState(
-                        () {}); // Обновляем главный экран, чтобы язык сменился везде
+                            () {}); // Обновляем главный экран, чтобы язык сменился везде
                   },
                   child: Text(txt['close'] ?? 'Close',
                       style:
-                          const TextStyle(color: Colors.amber, fontSize: 18)),
+                      const TextStyle(color: Colors.amber, fontSize: 18)),
                 ),
               ),
             ],
@@ -472,7 +471,7 @@ class _MainMenuState extends State<MainMenu>
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color:
-              isSelected ? Colors.amber.withOpacity(0.2) : Colors.transparent,
+          isSelected ? Colors.amber.withOpacity(0.2) : Colors.transparent,
           border: Border.all(color: isSelected ? Colors.amber : Colors.white24),
           borderRadius: BorderRadius.circular(10),
         ),
@@ -484,9 +483,9 @@ class _MainMenuState extends State<MainMenu>
 // Вспомогательный виджет для строк настроек
   Widget _buildSettingRow(
       {required IconData icon,
-      required String label,
-      required bool value,
-      required Function(bool) onChanged}) {
+        required String label,
+        required bool value,
+        required Function(bool) onChanged}) {
     return Row(
       children: [
         Icon(icon, color: Colors.white70),
@@ -535,16 +534,16 @@ class _MainMenuState extends State<MainMenu>
         mainAxisSize: MainAxisSize.min,
         children: Difficulty.values
             .map((d) => ChoiceChip(
-                  // 2. ЗАМЕНЯЕМ ЭТУ СТРОКУ:
-                  label: Text(txt[d.name] ?? d.name.toUpperCase(),
-                      style: const TextStyle(fontSize: 12)),
+          // 2. ЗАМЕНЯЕМ ЭТУ СТРОКУ:
+          label: Text(txt[d.name] ?? d.name.toUpperCase(),
+              style: const TextStyle(fontSize: 12)),
 
-                  selected: GameSettings.difficulty == d,
-                  onSelected: (s) =>
-                      setState(() => GameSettings.difficulty = d),
-                  selectedColor: Colors.amber.withOpacity(0.4),
-                  backgroundColor: Colors.transparent,
-                ))
+          selected: GameSettings.difficulty == d,
+          onSelected: (s) =>
+              setState(() => GameSettings.difficulty = d),
+          selectedColor: Colors.amber.withOpacity(0.4),
+          backgroundColor: Colors.transparent,
+        ))
             .toList(),
       ),
     );
@@ -610,8 +609,8 @@ class _MainMenuState extends State<MainMenu>
                                               ..strokeWidth = 8
                                               ..color = Colors.amber
                                                   .withOpacity(
-                                                      _glowAnimation.value *
-                                                          0.5)
+                                                  _glowAnimation.value *
+                                                      0.5)
                                               ..maskFilter = MaskFilter.blur(
                                                   BlurStyle.normal,
                                                   15 +
@@ -634,18 +633,18 @@ class _MainMenuState extends State<MainMenu>
                                                   ..style = PaintingStyle.stroke
                                                   ..strokeWidth = 12
                                                   ..color = Color.lerp(
-                                                          Colors.orange,
-                                                          Colors.amber,
-                                                          _glowAnimation.value)!
+                                                      Colors.orange,
+                                                      Colors.amber,
+                                                      _glowAnimation.value)!
                                                       .withOpacity(0.3 *
-                                                          _glowAnimation.value)
+                                                      _glowAnimation.value)
                                                   ..maskFilter =
-                                                      MaskFilter.blur(
-                                                          BlurStyle.normal,
-                                                          15 *
-                                                                  _glowAnimation
-                                                                      .value +
-                                                              5),
+                                                  MaskFilter.blur(
+                                                      BlurStyle.normal,
+                                                      15 *
+                                                          _glowAnimation
+                                                              .value +
+                                                          5),
                                               ),
                                             ),
                                           ),
@@ -662,10 +661,10 @@ class _MainMenuState extends State<MainMenu>
                                                   // Тень пульсирует и меняет оттенок от черного к медному
                                                   Shadow(
                                                     color: Color.lerp(
-                                                            Colors.black,
-                                                            Colors.deepOrange,
-                                                            _glowAnimation
-                                                                .value)!
+                                                        Colors.black,
+                                                        Colors.deepOrange,
+                                                        _glowAnimation
+                                                            .value)!
                                                         .withOpacity(0.8),
                                                     blurRadius: 12 +
                                                         (10 *
@@ -682,8 +681,8 @@ class _MainMenuState extends State<MainMenu>
                                                   Shadow(
                                                     color: Colors.white
                                                         .withOpacity(0.2 *
-                                                            _glowAnimation
-                                                                .value),
+                                                        _glowAnimation
+                                                            .value),
                                                     blurRadius: 2,
                                                   ),
                                                 ],
@@ -808,7 +807,9 @@ class _MancalaGameState extends State<MancalaGame>
   final List<GlobalKey> pitKeys = List.generate(14, (index) => GlobalKey());
   List<Widget> captureAnimations = []; // Здесь будут храниться летящие камни
   int?
-      _activeMovePit; // Лунка, из которой сейчас летят камни (скрываем визуально)
+  _activeMovePit; // Лунка, из которой сейчас летят камни (скрываем визуально)
+  Set<int> _capturingPits = {}; // Лунки, чьи камни сейчас летят при захвате (скрываем визуально)
+  // _incomingPits removed — was causing number ghost/overlap bug
   Map<int, bool> _shakeTriggers = {}; // Триггеры дрожания для каждой лунки
 
   //метод для вычисления экранных координат и запуска FlyingStone
@@ -820,9 +821,9 @@ class _MancalaGameState extends State<MancalaGame>
     }
 
     final RenderBox boxFrom =
-        pitKeys[fromIndex].currentContext!.findRenderObject() as RenderBox;
+    pitKeys[fromIndex].currentContext!.findRenderObject() as RenderBox;
     final RenderBox boxTo =
-        pitKeys[toIndex].currentContext!.findRenderObject() as RenderBox;
+    pitKeys[toIndex].currentContext!.findRenderObject() as RenderBox;
 
     final Offset startPos = boxFrom
         .localToGlobal(Offset(boxFrom.size.width / 2, boxFrom.size.height / 2));
@@ -858,28 +859,27 @@ class _MancalaGameState extends State<MancalaGame>
     }
 
     final RenderBox boxFrom =
-        pitKeys[fromIndex].currentContext!.findRenderObject() as RenderBox;
+    pitKeys[fromIndex].currentContext!.findRenderObject() as RenderBox;
     final RenderBox boxTo =
-        pitKeys[toIndex].currentContext!.findRenderObject() as RenderBox;
+    pitKeys[toIndex].currentContext!.findRenderObject() as RenderBox;
 
     final Offset startPos = boxFrom
         .localToGlobal(Offset(boxFrom.size.width / 2, boxFrom.size.height / 2));
     final Offset endPos = boxTo
         .localToGlobal(Offset(boxTo.size.width / 2, boxTo.size.height / 2));
 
-    // Создаём ключ для виджета, чтобы точно знать какой камень удалять
     final stoneKey = GlobalKey();
 
     final flying = FlyingStone(
       key: stoneKey,
       start: startPos,
       end: endPos,
-      stoneIndex: stoneIndex, // Передаём индекс для задержки
+      stoneIndex: stoneIndex,
       onComplete: () {
+        // Только убираем летящий камень — board обновляется батчем в _move
         if (mounted) {
           setState(() {
-            // Удаляем камень по ключу, а не по ссылке на виджет
-            captureAnimations.removeWhere((widget) => widget.key == stoneKey);
+            captureAnimations.removeWhere((w) => w.key == stoneKey);
           });
         }
       },
@@ -1230,7 +1230,7 @@ class _MancalaGameState extends State<MancalaGame>
   }
 
   // КРУГОВОЕ РАСПРЕДЕЛЕНИЕ КАМНЕЙ С АНИМАЦИЕЙ
-  Widget _buildStones(int count, bool isKalah) {
+  Widget _buildStones(int count, bool isKalah, int pitIndex) {
     if (GameSettings.visualMode == VisualMode.numbersOnly || count == 0)
       return const SizedBox();
 
@@ -1257,17 +1257,20 @@ class _MancalaGameState extends State<MancalaGame>
         final rnd = Random(index * 100);
 
         // Хаотичное смещение от центра
-        double randomRadius = sqrt(rnd.nextDouble()) * maxRadius;
+        // minRadius=10 — центр свободен для цифры
+        double minRadius = isKalah ? 0.0 : 10.0;
+        double randomRadius = minRadius + sqrt(rnd.nextDouble()) * (maxRadius - minRadius);
         double randomAngle = rnd.nextDouble() * 2 * pi;
 
         var colors = stoneColors[index % stoneColors.length];
 
         return Transform.translate(
+          key: ValueKey('stone_${pitIndex}_$index'),
           offset: Offset(
               cos(randomAngle) * randomRadius, sin(randomAngle) * randomRadius),
           child: Container(
-            width: 18, // Увеличили на 2 пикселя (было 10) Размер камней
-            height: 18, // Увеличили на 2 пикселя
+            width: 18,
+            height: 18,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: RadialGradient(
@@ -1352,7 +1355,7 @@ class _MancalaGameState extends State<MancalaGame>
                   image: AssetImage('assets/images/background.png'),
                   fit: BoxFit.cover,
                   colorFilter:
-                      ColorFilter.mode(Colors.black87, BlendMode.darken),
+                  ColorFilter.mode(Colors.black87, BlendMode.darken),
                 ),
               ),
               child: BackdropFilter(
@@ -1371,8 +1374,8 @@ class _MancalaGameState extends State<MancalaGame>
                               isP1Turn
                                   ? txt['p1_turn']!
                                   : (widget.mode == GameMode.ai
-                                      ? txt['ai_turn']!
-                                      : txt['p2_turn']!),
+                                  ? txt['ai_turn']!
+                                  : txt['p2_turn']!),
                               style: GoogleFonts.cinzel(
                                 // Можно добавить шрифт здесь
                                 textStyle: TextStyle(
@@ -1391,7 +1394,7 @@ class _MancalaGameState extends State<MancalaGame>
                           Expanded(
                             child: Padding(
                               padding:
-                                  const EdgeInsets.symmetric(horizontal: 10),
+                              const EdgeInsets.symmetric(horizontal: 10),
                               child: Center(
                                 child: FittedBox(
                                   fit: BoxFit.contain,
@@ -1415,96 +1418,96 @@ class _MancalaGameState extends State<MancalaGame>
                       ),
                       // кнопка вкл/выкл фон музыки
                       // Кнопки управления (Музыка + Отмена хода)
-    Positioned(
-    top: 5,
-    left: 5,
-    child: LayoutBuilder(
-    builder: (context, constraints) {
-    // Определяем ориентацию
-    final isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
-    final buttonSize = isPortrait ? 24.0 : 28.0; // Меньше в портрете
+                      Positioned(
+                        top: 5,
+                        left: 5,
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            // Определяем ориентацию
+                            final isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
+                            final buttonSize = isPortrait ? 24.0 : 28.0; // Меньше в портрете
 
-    return SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    child: Row(
-    children: [
-    // Кнопка музыки
-    IconButton(
-    icon: Icon(
-    GameSettings.isMusicOn
-    ? Icons.music_note
-        : Icons.music_off,
-    color: Colors.amber,
-    size: buttonSize, // 🆕 Адаптивный размер
-    ),
-    padding: EdgeInsets.zero,
-    constraints: const BoxConstraints(),
-    onPressed: () {
-    setState(() {
-    GameSettings.isMusicOn = !GameSettings.isMusicOn;
-    if (GameSettings.isMusicOn) {
-    AudioManager().playMusic();
-    } else {
-    AudioManager().stopMusic();
-    }
-    });
-    },
-    ),
-    const SizedBox(width: 6), // 🆕 Уменьшили отступ
+                            return SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  // Кнопка музыки
+                                  IconButton(
+                                    icon: Icon(
+                                      GameSettings.isMusicOn
+                                          ? Icons.music_note
+                                          : Icons.music_off,
+                                      color: Colors.amber,
+                                      size: buttonSize, // 🆕 Адаптивный размер
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    onPressed: () {
+                                      setState(() {
+                                        GameSettings.isMusicOn = !GameSettings.isMusicOn;
+                                        if (GameSettings.isMusicOn) {
+                                          AudioManager().playMusic();
+                                        } else {
+                                          AudioManager().stopMusic();
+                                        }
+                                      });
+                                    },
+                                  ),
+                                  const SizedBox(width: 6), // 🆕 Уменьшили отступ
 
-    // Кнопка ОТМЕНЫ хода
-    if (_canUndo &&
-    !animating &&
-    !isAiThinking &&
-    aiSelectedPit == null)
-    IconButton(
-    icon: Icon(Icons.undo,
-    color: Colors.amber,
-    size: buttonSize), // 🆕 Адаптивный размер
-    padding: EdgeInsets.zero,
-    constraints: const BoxConstraints(),
-    onPressed: _undoMove,
-    ),
+                                  // Кнопка ОТМЕНЫ хода
+                                  if (_canUndo &&
+                                      !animating &&
+                                      !isAiThinking &&
+                                      aiSelectedPit == null)
+                                    IconButton(
+                                      icon: Icon(Icons.undo,
+                                          color: Colors.amber,
+                                          size: buttonSize), // 🆕 Адаптивный размер
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      onPressed: _undoMove,
+                                    ),
 
-    const SizedBox(width: 6), // 🆕 Уменьшили отступ
+                                  const SizedBox(width: 6), // 🆕 Уменьшили отступ
 
-    // Кнопка подсказки
-    if (widget.mode == GameMode.ai &&
-    isP1Turn &&
-    !animating &&
-    AdMobManager().isRewardedAdReady)
-    IconButton(
-    icon: Icon(Icons.lightbulb_outline,
-    color: Colors.amber,
-    size: buttonSize), // 🆕 Адаптивный размер
-    padding: EdgeInsets.zero,
-    constraints: const BoxConstraints(),
-    tooltip: 'Hint (watch ad)',
-    onPressed: () {
-    AdMobManager().showRewardedAd(
-    onRewardEarned: (earned) {
-    if (earned && mounted) {
-    _showAIHint();
-    }
-    },
-    );
-    },
-    ),
-    ],
-    ),
-    );
-    },
-    ),
-    ),
-    ],
-    ),
-    ),
-    ),),
+                                  // Кнопка подсказки
+                                  if (widget.mode == GameMode.ai &&
+                                      isP1Turn &&
+                                      !animating &&
+                                      AdMobManager().isRewardedAdReady)
+                                    IconButton(
+                                      icon: Icon(Icons.lightbulb_outline,
+                                          color: Colors.amber,
+                                          size: buttonSize), // 🆕 Адаптивный размер
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      tooltip: 'Hint (watch ad)',
+                                      onPressed: () {
+                                        AdMobManager().showRewardedAd(
+                                          onRewardEarned: (earned) {
+                                            if (earned && mounted) {
+                                              _showAIHint();
+                                            }
+                                          },
+                                        );
+                                      },
+                                    ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),),
 
-    ...captureAnimations,
-    ],
-    ),
-    ),
+            ...captureAnimations,
+          ],
+        ),
+      ),
     );
   }
 
@@ -1529,16 +1532,7 @@ class _MancalaGameState extends State<MancalaGame>
         ],
       ),
       // Это создаст эффект "вдавленности" центральной части доски
-      foregroundDecoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(42),
-        gradient: RadialGradient(
-          radius: 1.5,
-          colors: [
-            Colors.transparent,
-            Colors.black.withOpacity(0.4), // Тень по краям внутри доски
-          ],
-        ),
-      ),
+      // foregroundDecoration удалён — затемнял крайние лунки поверх цифр
       child: Row(
         children: [
           _buildKalah(13, Colors.orangeAccent),
@@ -1636,6 +1630,7 @@ class _MancalaGameState extends State<MancalaGame>
             board[i] > 0);
 
     return ShakeAnimation(
+      key: pitKeys[i],
       trigger: _shakeTriggers[i] ?? false,
       onComplete: () {
         if (mounted) {
@@ -1645,7 +1640,6 @@ class _MancalaGameState extends State<MancalaGame>
         }
       },
       child: GestureDetector(
-        key: pitKeys[i],
         onTap: () => active && !animating && !isAiThinking ? _move(i) : null,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
@@ -1660,11 +1654,11 @@ class _MancalaGameState extends State<MancalaGame>
               BoxShadow(
                 color: active
                     ? (i < 6
-                        ? Colors.amber.withOpacity(0.5)
-                        : Colors.deepOrange.withOpacity(0.5))
+                    ? Colors.amber.withOpacity(0.5)
+                    : Colors.deepOrange.withOpacity(0.5))
                     : (i < 6
-                        ? Colors.amber.withOpacity(0)
-                        : Colors.deepOrange.withOpacity(0)),
+                    ? Colors.amber.withOpacity(0)
+                    : Colors.deepOrange.withOpacity(0)),
                 // ДОБАВИЛИ .clamp(0.0, 50.0) — теперь радиус не будет отрицательным!
                 blurRadius: (active ? 15.0 : 0.0).clamp(0.0, 50.0),
                 spreadRadius: (active ? 2.0 : 0.0).clamp(0.0, 20.0),
@@ -1690,50 +1684,41 @@ class _MancalaGameState extends State<MancalaGame>
               alignment: Alignment.center,
               children: [
                 // Скрываем камни, если это стартовая лунка текущего хода
-                if (i != _activeMovePit) _buildStones(board[i], false),
+                // или если камни из этой лунки сейчас улетают при захвате
+                if (i != _activeMovePit && !_capturingPits.contains(i))
+                  _buildStones(board[i], false, i),
                 if (GameSettings.visualMode != VisualMode.stonesOnly)
                   PulseAnimation(
+                    key: ValueKey('pulse_${i}_$isHighlighted'),
                     enabled: isHighlighted,
-                    child: AnimatedDefaultTextStyle(
-                      // ЗАМЕНА: Используем стандартный Curves.linear или Curves.easeInOut
-                      // Они никогда не выдают отрицательных значений в процессе анимации
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeInOut,
+                    child: Text(
+                      '${board[i]}',
                       style: GoogleFonts.cinzel(
                         textStyle: TextStyle(
-                          color: isHighlighted
-                              ? Colors.white
-                              : (i < 6
-                                  ? Colors.amber[100]
-                                  : Colors.orange[100]),
-                          fontSize: isHighlighted
-                              ? 44
-                              : 30, //размер шрифта цифр в лунках
+                          color: Colors.white,
+                          fontSize: isHighlighted ? 44 : 30,
                           fontWeight: FontWeight.w900,
                           shadows: [
-                            // 1. Стабильная тень
-                            const Shadow(
-                              color: Colors.black,
-                              blurRadius: 6,
-                              offset: Offset(2, 2),
-                            ),
-                            // 2. Магическая тень (Защищенная)
+                            const Shadow(color: Colors.black, blurRadius: 3, offset: Offset( 2,  2)),
+                            const Shadow(color: Colors.black, blurRadius: 3, offset: Offset(-2, -2)),
+                            const Shadow(color: Colors.black, blurRadius: 3, offset: Offset( 2, -2)),
+                            const Shadow(color: Colors.black, blurRadius: 3, offset: Offset(-2,  2)),
+                            const Shadow(color: Colors.black, blurRadius: 3, offset: Offset( 3,  0)),
+                            const Shadow(color: Colors.black, blurRadius: 3, offset: Offset(-3,  0)),
+                            const Shadow(color: Colors.black, blurRadius: 3, offset: Offset( 0,  3)),
+                            const Shadow(color: Colors.black, blurRadius: 3, offset: Offset( 0, -3)),
+                            const Shadow(color: Colors.black, blurRadius: 10, offset: Offset(0, 0)),
                             Shadow(
                               color: isHighlighted
-                                  ? Colors.white
+                                  ? Colors.white.withOpacity(0.9)
                                   : (active
-                                      ? (i < 6 ? Colors.amber : Colors.orange)
-                                      : (i < 6
-                                          ? Colors.amber.withOpacity(0)
-                                          : Colors.orange.withOpacity(0))),
-                              // Убираем сложные вычисления радиуса, оставляем простые double
-                              blurRadius:
-                                  isHighlighted ? 25.0 : (active ? 12.0 : 0.0),
+                                  ? (i < 6 ? Colors.amber : Colors.orange)
+                                  : Colors.transparent),
+                              blurRadius: isHighlighted ? 25.0 : (active ? 14.0 : 0.0),
                             ),
                           ],
                         ),
                       ),
-                      child: Text('${board[i]}'),
                     ),
                   ),
               ],
@@ -1757,7 +1742,7 @@ class _MancalaGameState extends State<MancalaGame>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildStones(board[i], true),
+          _buildStones(board[i], true, i),
           const SizedBox(height: 15),
           Text("${board[i]}",
               style: TextStyle(
@@ -1817,28 +1802,27 @@ class _MancalaGameState extends State<MancalaGame>
       stones--;
     }
 
-    // Обнуляем стартовую лунку СРАЗУ после запуска всех анимаций
+    // Скрываем камни визуально в стартовой лунке на время полёта
     setState(() {
       board[start] = 0;
-      _activeMovePit = null; // Сбрасываем флаг
+      _activeMovePit = null;
     });
 
     // Ждём завершения всех анимаций полёта
-    // Время = базовая задержка + время на последний камень + анимация
-    int totalDelay = (stoneIndex - 1) * 500 +
-        800 +
-        300; // 500ms задержка между камнями + 800ms полёт + 300ms буфер
+    int totalDelay = (stoneIndex - 1) * 500 + 800 + 300;
     await Future.delayed(Duration(milliseconds: totalDelay));
 
-    // Обновляем доску после завершения всех анимаций
-    setState(() {
-      for (int pit in targetPits) {
-        board[pit]++;
-        lastDrop = pit;
-        // Дрожание отключено
-        // _shakeTriggers[pit] = true;
-      }
-    });
+    // Атомарно: обновляем board и убираем все летящие камни в одном setState.
+    // Между исчезновением летящего камня и появлением числа нет ни одного кадра.
+    if (mounted) {
+      setState(() {
+        for (int pit in targetPits) {
+          board[pit]++;
+          lastDrop = pit;
+        }
+        captureAnimations.clear();
+      });
+    }
 
     // Звук приземления камней
     if (GameSettings.isSoundOn) {
@@ -1861,6 +1845,12 @@ class _MancalaGameState extends State<MancalaGame>
         if (board[opposite] > 0) {
           int kalah = p1Owns ? 6 : 13;
 
+          // 0. Скрываем камни в обеих лунках на время полёта, чтобы не было
+          // визуального задвоения (старые камни + летящие поверх них)
+          setState(() {
+            _capturingPits = {opposite, curr};
+          });
+
           // 1. Сначала запускаем визуальный полет
           _animateCapture(opposite, kalah); // Камни врага
           _animateCapture(curr, kalah); // Ваш последний камень
@@ -1870,11 +1860,12 @@ class _MancalaGameState extends State<MancalaGame>
           // 2. ЖДЕМ завершения анимации (в FlyingStone стоит duration 800ms)
           await Future.delayed(const Duration(milliseconds: 850));
 
-          // 3. ТОЛЬКО ТЕПЕРЬ обновляем цифры на доске
+          // 3. ТОЛЬКО ТЕПЕРЬ обновляем цифры на доске и снова показываем лунки
           setState(() {
             board[kalah] += board[opposite] + board[curr];
             board[opposite] = 0;
             board[curr] = 0;
+            _capturingPits = {};
           });
         }
       }
@@ -1882,17 +1873,36 @@ class _MancalaGameState extends State<MancalaGame>
 
     // 3. ПРОВЕРКА ОКОНЧАНИЯ ИГРЫ
     if (_checkGameOver()) {
-      // Собираем оставшиеся камни в Калахи
+      // Собираем оставшиеся камни в Калахи (с анимацией полёта, а не мгновенным исчезновением)
+      List<int> remainingP1 = [for (int i = 0; i < 6; i++) if (board[i] > 0) i];
+      List<int> remainingP2 = [for (int i = 7; i < 13; i++) if (board[i] > 0) i];
+
+      if (remainingP1.isNotEmpty || remainingP2.isNotEmpty) {
+        setState(() {
+          _capturingPits = {...remainingP1, ...remainingP2};
+        });
+
+        for (int i in remainingP1) {
+          _animateCapture(i, 6);
+        }
+        for (int i in remainingP2) {
+          _animateCapture(i, 13);
+        }
+
+        HapticFeedback.mediumImpact();
+        await Future.delayed(const Duration(milliseconds: 850));
+      }
+
       setState(() {
-        /* for (int i = 0; i < 6; i++) {
-        board[6] += board[i];
-        board[i] = 0;
-      }
-      for (int i = 7; i < 13; i++) {
-        board[13] += board[i];
-        board[i] = 0;
-      }
-      */
+        for (int i = 0; i < 6; i++) {
+          board[6] += board[i];
+          board[i] = 0;
+        }
+        for (int i = 7; i < 13; i++) {
+          board[13] += board[i];
+          board[i] = 0;
+        }
+        _capturingPits = {};
         animating = false;
       });
 
@@ -1926,15 +1936,15 @@ class _MancalaGameState extends State<MancalaGame>
       // ТУТ ВАША ЛОГИКА ИЗ ФАЙЛА:
       int bestEval = -10000;
       int aiMove = -1;
-      int depth = GameSettings.difficulty == 'Easy'
+      int depth = GameSettings.difficulty == Difficulty.easy
           ? 2
-          : (GameSettings.difficulty == 'Medium' ? 4 : 6);
+          : (GameSettings.difficulty == Difficulty.medium ? 4 : 6);
 
       for (int i = 7; i < 13; i++) {
         if (board[i] == 0) continue;
         var result = _simulateMoveDetailed(board, i);
         int eval =
-            _minimax(result.board, depth - 1, result.extraTurn, -10000, 10000);
+        _minimax(result.board, depth - 1, result.extraTurn, -10000, 10000);
         if (eval > bestEval) {
           bestEval = eval;
           aiMove = i;
@@ -2103,13 +2113,13 @@ class _MancalaGameState extends State<MancalaGame>
     }
 
     // 4. Захват: поощряем возможность захватить камни врага
-  for (int i = 7; i < 13; i++) {
-    if (b[i] == 0 && b[12 - i] > 0) {
-       // Если мы можем следующим ходом попасть сюда - это круто
-       // (но это уже считает сам минимакс через дерево ходов)
+    for (int i = 7; i < 13; i++) {
+      if (b[i] == 0 && b[12 - i] > 0) {
+        // Если мы можем следующим ходом попасть сюда - это круто
+        // (но это уже считает сам минимакс через дерево ходов)
+      }
     }
-  }
-   /* // 4. ЗАХВАТЫ
+    /* // 4. ЗАХВАТЫ
     for (int i = 0; i < 6; i++) {
       if (b[i] == 0 && b[12 - i] > 0) score -= (b[12 - i] * 15);
       if (b[12 - i] == 0 && b[i] > 0) score += (b[i] * 12);

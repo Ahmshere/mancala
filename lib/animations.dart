@@ -9,7 +9,7 @@ import 'dart:ui' as ui;
    ========================================================================== */
 class AnimatedStone extends StatefulWidget {
   final double
-      angle; // Угол размещения (для кругового или хаотичного расположения)
+  angle; // Угол размещения (для кругового или хаотичного расположения)
   final double radius; // Радиус разброса от центра лунки
   final List<Color> colors; // Список цветов для градиента (светлый и темный)
   final int index; // Порядковый номер камня (используется для задержки)
@@ -286,8 +286,8 @@ class _StoneConfettiState extends State<StoneConfetti>
   void initState() {
     super.initState();
     _controller =
-        AnimationController(vsync: this, duration: const Duration(seconds: 6))
-          ..repeat();
+    AnimationController(vsync: this, duration: const Duration(seconds: 6))
+      ..repeat();
   }
 
   @override
@@ -445,7 +445,7 @@ class _FlyingStoneState extends State<FlyingStone>
 
     // Генерируем случайный цвет для каждого камня
     final random =
-        Random(widget.stoneIndex + DateTime.now().millisecondsSinceEpoch);
+    Random(widget.stoneIndex + DateTime.now().millisecondsSinceEpoch);
     stoneColor = widget.color ??
         [
           Colors.amber,
@@ -478,11 +478,12 @@ class _FlyingStoneState extends State<FlyingStone>
           if (mounted) {
             widget.onComplete();
           }
+          // Если размонтирован ПОСЛЕ старта анимации — НЕ вызываем onComplete
         });
-      } else {
-        // Если виджет размонтирован во время задержки, всё равно вызываем callback
-        widget.onComplete();
       }
+      // Если размонтирован ДО старта (во время задержки) — НЕ вызываем onComplete.
+      // Было: widget.onComplete() вызывался немедленно → board[] обновлялся
+      // до приземления камня → ghost цифры.
     });
   }
 
